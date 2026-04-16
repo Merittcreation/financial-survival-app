@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Financial Survival App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','system-ui','sans-serif'] } } } }</script>
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0; background:#020209; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+    @keyframes scaleIn  { from{opacity:0;transform:scale(.72)} to{opacity:1;transform:scale(1)} }
+    @keyframes breathe  { 0%,100%{opacity:.18;transform:scale(1)} 50%{opacity:.32;transform:scale(1.08)} }
+    @keyframes ticker   { 0%{opacity:0;transform:translateY(8px)} 20%,80%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-8px)} }
+
+    .anim-fiu { animation:fadeInUp .48s ease both; }
+    .anim-fi  { animation:fadeIn   .38s ease both; }
+    .anim-si  { animation:scaleIn  .52s cubic-bezier(.175,.885,.32,1.275) both; }
+
+    .d1{animation-delay:.08s} .d2{animation-delay:.16s} .d3{animation-delay:.24s}
+    .d4{animation-delay:.32s} .d5{animation-delay:.40s} .d6{animation-delay:.50s}
+
+    .glow-orb { animation:breathe 5s ease-in-out infinite; }
+    .bar-grow { transition:width 1s ease; }
+
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    input[type=number] { -moz-appearance:textfield; }
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-white">
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ═══════════════════════════════════════════════
+   CORE LOGIC — Financial Advisor AI
+═══════════════════════════════════════════════ */
+
+function calcDays(cash, expenses) {
+  if (!cash || cash <= 0) return 0;
+  if (!expenses || expenses <= 0) return 999;
+  return Math.floor(cash / (expenses / 30));
+}
+
+// 3-tier classification: Critical / Risky / Stable
+function getStatus(days) {
+  if (days < 30)  return {
+    tier:'critical', label:'CRITICAL',
+    tc:'text-red-400', bc:'border-red-500', bg:'bg-red-500/10', bar:'bg-red-500',
+    glow:'rgba(239,68,68,.3)', dot:'🔴',
+    tagBg:'bg-red-500/15 border-red-500/40',
+  };
+  if (days < 90)  return {
+    tier:'risky', label:'RISKY',
+    tc:'text-amber-400', bc:'border-amber-500', bg:'bg-amber-500/10', bar:'bg-amber-500',
+    glow:'rgba(245,158,11,.3)', dot:'🟡',
+    tagBg:'bg-amber-500/15 border-amber-500/40',
+  };
+  return {
+    tier:'stable', label:'STABLE',
+    tc:'text-emerald-400', bc:'border-emerald-500', bg:'bg-emerald-500/10', bar:'bg-emerald-500',
+    glow:'rgba(16,185,129,.3)', dot:'🟢',
+    tagBg:'bg-emerald-500/15 border-emerald-500/40',
+  };
+}
+
+// Supportive friend tone — honest, not harsh
+function advisorMessage(days, tier) {
+  if (tier === 'critical') {
+    if (days === 0) return "Zero runway — every day you wait costs you options. But you can change this.";
+    if (days <= 7)  return "Less than a week. I need you to act today. The good news: this is fixable fast.";
+    if (days <= 14) return `${days} days is your window. The right moves now can triple this number.`;
+    return `${days} days — less than a month. Tight, but I've seen people turn this around in weeks.`;
+  }
+  if (tier === 'risky') {
+    if (days < 60) return `${days} days. About ${Math.ceil(days/30)} months. You have time to act — just not time to waste.`;
+    return `${days} days. Three months is workable. A few focused changes and you'll be in a much stronger spot.`;
+  }
+  if (days <= 180) return `${days} days — that's solid. You're ahead of most people. Let's push it even higher.`;
+  return `${days} days? That's over ${Math.floor(days/30)} months. Genuinely impressive. You've built real resilience.`;
+}
+
+// ── Rule-based action generation ──────────────
+function actionsA({ income, expenses }) {
+  const a = [];
+  if (expenses * .35 > income * .30) a.push({ t:'Find a roommate — cut rent 30–40% overnight', i:'high' });
+  a.push({ t:'Cancel every subscription you haven\'t used in 30 days', i:'medium' });
+  a.push({ t:'Cook at home 5 nights a week — biggest food budget killer is eating out', i:'medium' });
+  a.push({ t:'Negotiate a cheaper phone or internet plan — takes 20 mins, saves every month', i:'low' });
+  a.push({ t:'Use cashback apps on every purchase (Honey, Rakuten) — zero effort', i:'low' });
+  return a.slice(0,4);
+}
+
+function actionsB({ income, expenses, debt }) {
+  const a = [];
+  a.push({ t:'Negotiate your rent — landlords almost always prefer keeping good tenants', i:'high' });
+  a.push({ t:'Start freelancing on weekends using your current skills — even 10 hrs/week helps', i:'high' });
+  a.push({ t:'Sell unused items now: electronics, clothes, gear, furniture — list everything', i:'medium' });
+  a.push(debt > income * 2
+    ? { t:'Consolidate high-interest debt to cut your monthly payment significantly', i:'high' }
+    : { t:'Drive rideshare or do food delivery evenings — $300–600/mo extra is real', i:'medium' });
+  a.push({ t:'Meal prep every Sunday — 40% food savings, zero willpower required during the week', i:'medium' });
+  return a.slice(0,5);
+}
+
+function actionsC() {
+  return [
+    { t:'Downsize your home or rent out a spare room — housing is usually the #1 cost', i:'very high' },
+    { t:'Sell your car — switch to transit, bike, or rideshare and pocket the difference', i:'very high' },
+    { t:'Take a second job or go full-time freelance immediately — no half-measures', i:'very high' },
+    { t:'Liquidate non-essentials: gadgets, jewelry, collectibles, gym equipment — sell all of it', i:'high' },
+    { t:'Apply for every gig you qualify for: tutoring, delivery, VA work, dog walking', i:'high' },
+  ];
+}
+
+function buildRoutes(data) {
+  const base = calcDays(data.cash, data.expenses);
+  return [
+    {
+      id:'a', name:'Play It Safe', sub:'Small wins, zero drama', emoji:'🛡️', cut:'15%',
+      desc:"These are easy wins you can start this week. You won't even feel them — but they add up.",
+      // Green = Safe
+      cb:'border-emerald-500/40', at:'text-emerald-400', ab:'bg-emerald-500/10',
+      bar:'bg-emerald-500', btn:'bg-emerald-600 hover:bg-emerald-500',
+      newExp: data.expenses * .85,
+      newDays: calcDays(data.cash, data.expenses * .85),
+      gain:    calcDays(data.cash, data.expenses * .85) - base,
+      actions: actionsA(data),
+    },
+    {
+      id:'b', name:'Get Serious', sub:'Real changes, real results', emoji:'💪', cut:'30%',
+      desc:"This takes commitment — but you'll notice results within 30 days. Most people start here.",
+      // Amber = Risky/Warning
+      cb:'border-amber-500/40', at:'text-amber-400', ab:'bg-amber-500/10',
+      bar:'bg-amber-500', btn:'bg-amber-600 hover:bg-amber-500',
+      newExp: data.expenses * .70,
+      newDays: calcDays(data.cash, data.expenses * .70),
+      gain:    calcDays(data.cash, data.expenses * .70) - base,
+      actions: actionsB(data),
+    },
+    {
+      id:'c', name:'All In', sub:'Maximum impact. No excuses.', emoji:'🔥', cut:'50%',
+      desc:"The nuclear option. You're optimizing for survival, not comfort. Use when you need maximum results fast.",
+      // Red = Danger/Extreme
+      cb:'border-rose-500/40', at:'text-rose-400', ab:'bg-rose-500/10',
+      bar:'bg-rose-500', btn:'bg-rose-700 hover:bg-rose-600',
+      newExp: data.expenses * .50,
+      newDays: calcDays(data.cash, data.expenses * .50),
+      gain:    calcDays(data.cash, data.expenses * .50) - base,
+      actions: actionsC(data),
+    },
+  ];
+}
+
+function buildWeeks(base, route, n=8) {
+  const labels = ['First cuts made','Habits forming','Momentum building','New normal','System working','Compounding','Crushing it','Goal reached'];
+  return Array.from({length:n}, (_,i) => {
+    const gained = Math.floor(route.gain * Math.pow((i+1)/n, 0.65));
+    return { week:i+1, days:base+gained, gained, label:labels[i] };
+  });
+}
+
+function fmt$(n) {
+  return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
+}
+
+/* ═══════════════════════════════════════════════
+   COUNT-UP HOOK
+═══════════════════════════════════════════════ */
+function useCountUp(target, ms=1400) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (target <= 0) return;
+    const steps = Math.min(target, 80);
+    let cur = 0;
+    const t = setInterval(() => {
+      cur += target / steps;
+      if (cur >= target) { setV(target); clearInterval(t); }
+      else setV(Math.floor(cur));
+    }, ms / steps);
+    return () => clearInterval(t);
+  }, [target]);
+  return v;
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN 1 — LANDING
+═══════════════════════════════════════════════ */
+function LandingScreen({ onStart }) {
+  return (
+    <div className="min-h-screen flex flex-col px-6 py-10 relative overflow-hidden">
+
+      {/* Background glow orb */}
+      <div className="glow-orb absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-emerald-500 blur-3xl pointer-events-none" />
+
+      {/* Brand */}
+      <div className="anim-fi relative z-10">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-sm">⚡</div>
+          <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Financial Survival</span>
+        </div>
+      </div>
+
+      {/* Hero */}
+      <div className="flex-1 flex flex-col justify-center relative z-10 -mt-8">
+        <div className="anim-fiu d1 mb-8">
+          <h1 className="text-[2.6rem] font-black text-white leading-[1.1] mb-5">
+            How long can<br/>you survive<br/>
+            <span className="text-emerald-400">without income?</span>
+          </h1>
+          <p className="text-slate-400 text-base leading-relaxed">
+            Most people guess wrong.<br/>
+            Find out the real number in 30 seconds.
+          </p>
+        </div>
+
+        {/* CTA */}
+        <div className="anim-fiu d2 mb-10">
+          <button
+            onClick={onStart}
+            className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 active:scale-[.98] text-white font-black text-xl rounded-2xl transition-all duration-200 shadow-2xl shadow-emerald-500/25"
+          >
+            Find Out Now →
+          </button>
+          <p className="text-center text-slate-600 text-xs mt-3">No account · No data stored online · 30 seconds</p>
+        </div>
+
+        {/* Status legend */}
+        <div className="anim-fiu d3">
+          <p className="text-slate-600 text-xs uppercase tracking-widest font-semibold mb-3 text-center">Where will you land?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { color:'red',     dot:'🔴', label:'CRITICAL', sub:'Under 30 days',  bg:'bg-red-500/10',     border:'border-red-500/25',     tc:'text-red-400'     },
+              { color:'amber',   dot:'🟡', label:'RISKY',    sub:'30 – 90 days',   bg:'bg-amber-500/10',   border:'border-amber-500/25',   tc:'text-amber-400'   },
+              { color:'emerald', dot:'🟢', label:'STABLE',   sub:'90+ days',        bg:'bg-emerald-500/10', border:'border-emerald-500/25', tc:'text-emerald-400' },
+            ].map(s => (
+              <div key={s.label} className={`${s.bg} border ${s.border} rounded-xl p-3 text-center`}>
+                <div className="text-lg mb-1">{s.dot}</div>
+                <div className={`${s.tc} font-black text-xs`}>{s.label}</div>
+                <div className="text-slate-600 text-xs mt-0.5">{s.sub}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN 2 — INPUT
+═══════════════════════════════════════════════ */
+const FIELDS = [
+  { id:'cash',     label:'Cash on hand',     hint:'Savings + checking — money available right now', ph:'1,500', emoji:'💰', req:true },
+  { id:'income',   label:'Monthly income',   hint:'Take-home pay after taxes',                     ph:'2,500', emoji:'💵', req:true },
+  { id:'expenses', label:'Monthly expenses', hint:'Rent, food, bills, transport, subscriptions',   ph:'2,000', emoji:'📊', req:true },
+  { id:'debt',     label:'Total debt',       hint:'Credit cards, loans, BNPL (enter 0 if none)',   ph:'0',     emoji:'📋', req:false },
+];
+
+function InputScreen({ onSubmit, onBack }) {
+  const [vals, setVals]   = useState({ cash:'', income:'', expenses:'', debt:'' });
+  const [errs, setErrs]   = useState({});
+  const [focus, setFocus] = useState(null);
+  const firstRef = useRef(null);
+  useEffect(() => { firstRef.current?.focus(); }, []);
+
+  const change = (id, raw) => {
+    setVals(p => ({...p, [id]: raw.replace(/[^0-9]/g,'')}));
+    if (errs[id]) setErrs(p => ({...p, [id]:null}));
+  };
+  const disp = id => {
+    const v = vals[id]; if (!v) return '';
+    return focus === id ? v : new Intl.NumberFormat('en-US').format(v);
+  };
+  const submit = e => {
+    e.preventDefault();
+    const e2 = {};
+    FIELDS.filter(f=>f.req).forEach(f => { if (!vals[f.id]) e2[f.id]='Required'; });
+    if (Object.keys(e2).length) { setErrs(e2); return; }
+    onSubmit({ cash:+vals.cash||0, income:+vals.income||0, expenses:+vals.expenses||0, debt:+vals.debt||0 });
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col px-6 py-10">
+      <div className="anim-fiu mb-8">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 text-sm transition-colors mb-5">← Back</button>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center text-xs">⚡</div>
+          <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Your Numbers</span>
+        </div>
+        <h1 className="text-2xl font-extrabold text-white leading-tight mb-2">
+          Just 4 numbers.<br/>
+          <span className="text-slate-400 font-medium text-xl">Totally honest. No judgment.</span>
+        </h1>
+      </div>
+
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        {FIELDS.map((f, i) => (
+          <div key={f.id} className={`anim-fiu d${i+1}`}>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+              <span className="mr-1.5">{f.emoji}</span>{f.label}
+              {f.req && <span className="text-red-400 ml-1">*</span>}
+            </label>
+            <div className={`flex items-center rounded-xl border transition-all duration-200 ${
+              focus===f.id ? 'border-emerald-500 bg-slate-800/80 shadow-lg shadow-emerald-500/10'
+              : errs[f.id]  ? 'border-red-500/70 bg-slate-900/80'
+              : 'border-slate-700/60 bg-slate-900 hover:border-slate-600'
+            }`}>
+              <span className="pl-4 text-slate-400 text-lg font-semibold select-none">$</span>
+              <input
+                ref={i===0?firstRef:null}
+                type="text" inputMode="numeric"
+                value={disp(f.id)}
+                onChange={e => change(f.id, e.target.value)}
+                onFocus={() => setFocus(f.id)}
+                onBlur={() => setFocus(null)}
+                placeholder={f.ph}
+                className="flex-1 bg-transparent py-4 px-2 text-white text-lg font-semibold placeholder-slate-700 outline-none"
+              />
+            </div>
+            {errs[f.id]
+              ? <p className="text-red-400 text-xs mt-1.5 ml-1">{errs[f.id]}</p>
+              : <p className="text-slate-600 text-xs mt-1.5 ml-1">{f.hint}</p>}
+          </div>
+        ))}
+
+        <div className="anim-fiu d5 mt-2 pb-10">
+          <button type="submit" className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[.98] text-white font-bold text-lg rounded-xl transition-all duration-200 shadow-xl shadow-emerald-500/20">
+            Show Me My Number →
+          </button>
+          <p className="text-center text-slate-600 text-xs mt-3">Your data never leaves this device</p>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN 3 — RESULT (Wow Moment)
+═══════════════════════════════════════════════ */
+function ResultScreen({ data, onContinue, onReset }) {
+  const days    = calcDays(data.cash, data.expenses);
+  const status  = getStatus(days);
+  const count   = useCountUp(days);
+  const message = advisorMessage(days, status.tier);
+
+  const savRate  = data.income > 0 ? Math.round(((data.income - data.expenses) / data.income) * 100) : 0;
+  const dti      = data.income > 0 ? (data.debt / data.income).toFixed(1) : '—';
+  const meterPct = Math.min((days / 365) * 100, 100);
+
+  return (
+    <div className="min-h-screen flex flex-col px-6 py-10">
+
+      {/* Top bar */}
+      <div className="anim-fi flex items-center justify-between mb-8">
+        <button onClick={onReset} className="text-slate-500 hover:text-slate-300 text-sm transition-colors">← Start over</button>
+        <span className={`px-3 py-1 rounded-full text-xs font-black tracking-widest border ${status.tagBg} ${status.tc}`}>
+          {status.dot} {status.label}
+        </span>
+      </div>
+
+      {/* Main result */}
+      <div className="flex-1 flex flex-col items-center justify-center -mt-6">
+        <p className="anim-fi text-slate-400 text-base mb-5">You can survive</p>
+
+        <div
+          className={`anim-si flex items-center justify-center w-52 h-52 rounded-full border-4 ${status.bc} ${status.bg} mb-4`}
+          style={{ boxShadow:`0 0 80px ${status.glow}` }}
+        >
+          <div className="text-center">
+            <div className={`text-[4.5rem] leading-none font-black ${status.tc}`}>{count}</div>
+            <div className="text-slate-300 text-xl font-semibold mt-1">days</div>
+          </div>
+        </div>
+
+        {/* Advisor message */}
+        <div className={`anim-fiu d1 w-full ${status.bg} border ${status.bc} rounded-2xl px-5 py-4 mb-6 text-center`}>
+          <p className="text-slate-200 text-sm leading-relaxed">{message}</p>
+        </div>
+
+        {/* Survival meter */}
+        <div className="w-full anim-fiu d2">
+          <div className="flex justify-between text-xs text-slate-600 mb-2">
+            <span>0 days</span><span>1 year</span>
+          </div>
+          <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full bar-grow ${status.bar}`} style={{width:`${meterPct}%`}} />
+          </div>
+          <div className="flex justify-between text-xs mt-2">
+            <span className="text-slate-600">CRITICAL &lt;30</span>
+            <span className="text-slate-600">RISKY 30–90</span>
+            <span className="text-slate-600">STABLE 90+</span>
+          </div>
+        </div>
+
+        {/* Quick stats */}
+        <div className="w-full grid grid-cols-3 gap-3 mt-6 anim-fiu d3">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+            <div className="text-white font-bold text-base">{fmt$(data.expenses)}</div>
+            <div className="text-slate-500 text-xs mt-0.5">Monthly burn</div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+            <div className={`font-bold text-base ${savRate>=15?'text-emerald-400':savRate>=0?'text-amber-400':'text-red-400'}`}>{savRate}%</div>
+            <div className="text-slate-500 text-xs mt-0.5">Savings rate</div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+            <div className={`font-bold text-base ${parseFloat(dti)<=2?'text-blue-400':'text-amber-400'}`}>{dti}x</div>
+            <div className="text-slate-500 text-xs mt-0.5">Debt/income</div>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="anim-fiu d4 mt-8 pb-6">
+        <button onClick={onContinue} className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[.98] text-white font-bold text-lg rounded-xl transition-all duration-200 shadow-xl shadow-emerald-500/20">
+          See Your Game Plan →
+        </button>
+        <p className="text-center text-slate-600 text-xs mt-3">3 routes to more runway. Pick what fits your life.</p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN 4 — ROUTES
+═══════════════════════════════════════════════ */
+const IMPACT = {
+  'very high':'bg-rose-500/15 text-rose-400',
+  'high':'bg-blue-500/15 text-blue-400',
+  'medium':'bg-amber-500/15 text-amber-400',
+  'low':'bg-slate-600/30 text-slate-400',
+};
+
+function RouteCard({ r, base, onChoose, delay }) {
+  const [open, setOpen] = useState(false);
+  const pct = Math.min((r.newDays / Math.max(r.newDays * 1.2, 180)) * 100, 100);
+
+  return (
+    <div className="anim-fiu rounded-2xl border bg-slate-900 overflow-hidden" style={{animationDelay:`${delay}s`, borderColor:open?undefined:undefined}} >
+      <div className={`border ${r.cb} rounded-2xl overflow-hidden`}>
+        <div className="p-5">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xl">{r.emoji}</span>
+                <span className="font-bold text-white text-lg">{r.name}</span>
+              </div>
+              <p className="text-slate-500 text-sm">{r.sub}</p>
+            </div>
+            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ml-2 ${r.ab} ${r.at}`}>
+              -{r.cut} spend
+            </span>
+          </div>
+
+          {/* Days */}
+          <div className="flex items-end gap-3 mb-3">
+            <div>
+              <div className={`text-5xl font-black leading-none ${r.at}`}>{r.newDays}</div>
+              <div className="text-slate-500 text-sm mt-0.5">days runway</div>
+            </div>
+            <div className="pb-1">
+              <span className="bg-emerald-500/15 text-emerald-400 px-3 py-1 rounded-full text-sm font-bold">+{r.gain} days</span>
+            </div>
+          </div>
+
+          <p className="text-slate-400 text-sm mb-4 leading-snug">{r.desc}</p>
+
+          {/* Mini bar */}
+          <div className="mb-4">
+            <div className="flex justify-between text-xs text-slate-600 mb-1.5">
+              <span>Now: {base}d</span><span>After: {r.newDays}d</span>
+            </div>
+            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${r.bar}`} style={{width:`${pct}%`}} />
+            </div>
+          </div>
+
+          <button onClick={()=>setOpen(!open)} className={`text-sm font-semibold ${r.at} hover:opacity-75 flex items-center gap-1 transition-opacity`}>
+            <span>{open?'▲':'▼'}</span>
+            <span>{open?'Hide':'Show'} concrete actions ({r.actions.length})</span>
+          </button>
+        </div>
+
+        {open && (
+          <div className={`border-t ${r.cb} px-5 py-4 space-y-3.5`}>
+            {r.actions.map((a,i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className={`w-5 h-5 rounded-full ${r.ab} flex items-center justify-center shrink-0 mt-0.5`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${r.bar}`} />
+                </div>
+                <p className="flex-1 text-slate-300 text-sm leading-snug">{a.t}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${IMPACT[a.i]||IMPACT.low}`}>{a.i}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="px-5 pb-5 pt-3">
+          <button onClick={()=>onChoose(r)} className={`w-full py-3 rounded-xl text-white font-bold transition-all active:scale-[.98] ${r.btn}`}>
+            I'll Do This →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RoutesScreen({ data, onChoose, onBack }) {
+  const routes = buildRoutes(data);
+  const base   = calcDays(data.cash, data.expenses);
+  const status = getStatus(base);
+
+  return (
+    <div className="min-h-screen flex flex-col px-6 py-10">
+      <div className="anim-fi mb-8">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 text-sm mb-6 flex items-center gap-1 transition-colors">← Back</button>
+        <h2 className="text-2xl font-extrabold text-white mb-1">Here's your game plan</h2>
+        <p className="text-slate-400 text-sm">
+          You have <span className={`font-bold ${status.tc}`}>{base} days</span> right now.
+          Pick a route and change that number.
+        </p>
+      </div>
+
+      {/* Route color legend */}
+      <div className="anim-fiu d1 flex items-center gap-3 mb-5 text-xs text-slate-500">
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"/>Safe</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"/>Serious</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"/>Extreme</span>
+      </div>
+
+      <div className="flex flex-col gap-4 pb-10">
+        {routes.map((r,i) => <RouteCard key={r.id} r={r} base={base} onChoose={onChoose} delay={i*.09} />)}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN 5 — PROGRESS
+═══════════════════════════════════════════════ */
+function ProgressScreen({ data, route, onBack, onReset }) {
+  const base      = calcDays(data.cash, data.expenses);
+  const weeks     = buildWeeks(base, route, 8);
+  const final     = weeks[7].days;
+  const gain      = final - base;
+  const status    = getStatus(final);
+  const baseStatus= getStatus(base);
+  const maxDays   = Math.max(final * 1.1, 90);
+  const saved     = data.expenses - route.newExp;
+
+  const milestones = [0, 2, 4, 7].map(i => weeks[i]);
+
+  return (
+    <div className="min-h-screen flex flex-col px-6 py-10">
+      <div className="anim-fi mb-8">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 text-sm mb-6 transition-colors">← Back to routes</button>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xl">{route.emoji}</span>
+          <span className={`text-sm font-bold ${route.at}`}>{route.name}</span>
+        </div>
+        <h2 className="text-2xl font-extrabold text-white mb-1">Your 8-week projection</h2>
+        <p className="text-slate-400 text-sm">Stick to the plan. Watch your runway grow.</p>
+      </div>
+
+      {/* Before / After */}
+      <div className="anim-fiu d1 grid grid-cols-2 gap-3 mb-5">
+        <div className={`${baseStatus.bg} border ${baseStatus.bc} rounded-2xl p-4 text-center`}>
+          <p className="text-slate-500 text-xs mb-1">Today</p>
+          <div className={`text-4xl font-black ${baseStatus.tc}`}>{base}</div>
+          <div className="text-slate-500 text-xs mt-0.5">days</div>
+          <span className={`inline-block mt-2 text-xs font-bold ${baseStatus.tc}`}>{baseStatus.label}</span>
+        </div>
+        <div className={`${status.bg} border ${status.bc} rounded-2xl p-4 text-center`}>
+          <p className="text-slate-500 text-xs mb-1">After 8 weeks</p>
+          <div className={`text-4xl font-black ${status.tc}`}>{final}</div>
+          <div className="text-slate-500 text-xs mt-0.5">days</div>
+          <span className={`inline-block mt-2 text-xs font-bold ${status.tc}`}>{status.label}</span>
+        </div>
+      </div>
+      <div className="anim-fiu d1 text-center mb-5">
+        <span className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-400 px-4 py-2 rounded-full text-sm font-bold">
+          ↑ +{gain} days gained from today
+        </span>
+      </div>
+
+      {/* Weekly bars */}
+      <div className="anim-fiu d2 bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-5">
+        <h3 className="text-sm font-semibold text-slate-300 mb-4">Week-by-week progress</h3>
+        <div className="space-y-2.5">
+          {weeks.map((w,i) => (
+            <div key={w.week} className="flex items-center gap-3">
+              <div className="w-8 text-xs text-slate-600 text-right shrink-0">W{w.week}</div>
+              <div className="flex-1 h-6 bg-slate-800 rounded-lg overflow-hidden">
+                <div
+                  className={`h-full rounded-lg flex items-center px-2 bar-grow ${route.bar}`}
+                  style={{width:`${(w.days/maxDays)*100}%`, transitionDelay:`${i*.06}s`, opacity:.6+i*.05}}
+                >
+                  {(w.days/maxDays)>.22 && <span className="text-white text-xs font-semibold">{w.days}d</span>}
+                </div>
+              </div>
+              <div className="w-12 text-xs text-emerald-400 font-bold text-right shrink-0">+{w.gained}d</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Milestones */}
+      <div className="anim-fiu d3 bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-5">
+        <h3 className="text-sm font-semibold text-slate-300 mb-4">Key milestones</h3>
+        <div className="space-y-3">
+          {milestones.map((w,i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full ${route.ab} flex items-center justify-center shrink-0`}>
+                <span className={`text-xs font-black ${route.at}`}>{w.week}</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-slate-200 text-sm font-medium">{w.label}</p>
+                <p className="text-slate-500 text-xs">{w.days} days runway</p>
+              </div>
+              <span className="text-emerald-400 text-sm font-bold">+{w.gained}d</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mission */}
+      <div className={`anim-fiu d4 ${route.ab} border ${route.cb} rounded-2xl p-5 mb-8`}>
+        <p className={`${route.at} font-bold text-sm mb-2`}>Your mission:</p>
+        <p className="text-slate-300 text-sm leading-relaxed">
+          Follow <strong className="text-white">{route.name}</strong> for 8 weeks.
+          Cut monthly expenses from <strong className="text-white">{fmt$(data.expenses)}</strong> to{' '}
+          <strong className="text-white">{fmt$(route.newExp)}</strong>.
+          That's <strong className={route.at}>{fmt$(saved)}/month</strong> freed up —
+          every dollar of it extends your runway.
+        </p>
+      </div>
+
+      <div className="flex gap-3 anim-fiu d5 pb-6">
+        <button onClick={onReset} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition-all">
+          Recalculate
+        </button>
+        <button onClick={onBack} className={`flex-1 py-3 ${route.btn} text-white font-bold rounded-xl transition-all active:scale-[.98]`}>
+          Try Another Route
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   APP ROOT
+═══════════════════════════════════════════════ */
+const KEY = 'fsa_v2';
+
+function App() {
+  const [screen, setScreen] = useState('landing');
+  const [data,   setData]   = useState(null);
+  const [route,  setRoute]  = useState(null);
+
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY));
+      if (s?.data) { setData(s.data); setRoute(s.route||null); setScreen(s.screen||'result'); }
+    } catch {}
+  }, []);
+
+  const save = (d, r, sc) => {
+    try { localStorage.setItem(KEY, JSON.stringify({data:d, route:r, screen:sc})); } catch {}
+  };
+
+  const go = (sc, d=data, r=route) => { setScreen(sc); save(d, r, sc); };
+
+  const submit = d => { setData(d); setRoute(null); go('result', d, null); };
+  const choose = r => { setRoute(r); go('progress', data, r); };
+  const reset  = () => { setData(null); setRoute(null); setScreen('landing'); localStorage.removeItem(KEY); };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white" style={{fontFamily:"'Inter',sans-serif"}}>
+      <div className="max-w-md mx-auto min-h-screen">
+        {screen==='landing'  && <LandingScreen onStart={() => go('input')} />}
+        {screen==='input'    && <InputScreen   onSubmit={submit} onBack={() => go('landing')} />}
+        {screen==='result'   && data && <ResultScreen   data={data} onContinue={() => go('routes')} onReset={reset} />}
+        {screen==='routes'   && data && <RoutesScreen   data={data} onChoose={choose} onBack={() => go('result')} />}
+        {screen==='progress' && data && route && <ProgressScreen data={data} route={route} onBack={() => go('routes')} onReset={reset} />}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

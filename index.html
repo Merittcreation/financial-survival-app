@@ -276,8 +276,11 @@ function buildWeeks(base,route,t,n=8){
     return{week:i+1,days:base+gained,gained,label:t.weekLabels[i]};
   });
 }
-function fmt$(n){return new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:0}).format(n);}
-function fmtUSD(n){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);}
+function fmtC(n,lang){
+  return lang==='th'
+    ? new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:0}).format(n)
+    : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
+}
 
 /* ═══════════════════════════════════════
    LANGUAGE TOGGLE
@@ -407,7 +410,7 @@ function InputScreen({onSubmit,onBack,lang,setLang}){
               {FIELD_REQ[id]&&<span className="text-red-400 ml-1">*</span>}
             </label>
             <div className={`flex items-center rounded-xl border transition-all duration-200 ${focus===id?'border-emerald-500 bg-slate-800/80 shadow-lg shadow-emerald-500/10':errs[id]?'border-red-500/70 bg-slate-900/80':'border-slate-700/60 bg-slate-900 hover:border-slate-600'}`}>
-              <span className="pl-4 text-slate-400 text-lg font-semibold select-none">$</span>
+              <span className="pl-4 text-slate-400 text-lg font-semibold select-none">{lang==='th'?'฿':'$'}</span>
               <input ref={i===0?firstRef:null} type="text" inputMode="numeric"
                 value={disp(id)} onChange={e=>change(id,e.target.value)}
                 onFocus={()=>setFocus(id)} onBlur={()=>setFocus(null)}
@@ -472,7 +475,7 @@ function ResultScreen({data,onContinue,onReset,lang,setLang}){
           </div>
         </div>
         <div className="w-full grid grid-cols-3 gap-3 mt-6 anim-fiu d3">
-          {[{v:fmtUSD(data.expenses),l:t.monthlyBurn,c:'text-white'},{v:`${savRate}%`,l:t.savingsRate,c:savRate>=15?'text-emerald-400':savRate>=0?'text-amber-400':'text-red-400'},{v:`${dti}x`,l:t.debtIncome,c:parseFloat(dti)<=2?'text-blue-400':'text-amber-400'}].map((s,i)=>(
+          {[{v:fmtC(data.expenses,lang),l:t.monthlyBurn,c:'text-white'},{v:`${savRate}%`,l:t.savingsRate,c:savRate>=15?'text-emerald-400':savRate>=0?'text-amber-400':'text-red-400'},{v:`${dti}x`,l:t.debtIncome,c:parseFloat(dti)<=2?'text-blue-400':'text-amber-400'}].map((s,i)=>(
             <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
               <div className={`font-bold text-base ${s.c}`}>{s.v}</div>
               <div className="text-slate-500 text-xs mt-0.5">{s.l}</div>
@@ -672,7 +675,7 @@ function ProgressScreen({data,route,onBack,onReset,lang,setLang}){
       {/* Mission */}
       <div className={`anim-fiu d4 ${route.ab} border ${route.cb} rounded-2xl p-5 mb-8`}>
         <p className={`${route.at} font-bold text-sm mb-2`}>{t.missionTitle}</p>
-        <p className="text-slate-300 text-sm leading-relaxed">{t.missionBody(route.name,fmtUSD(data.expenses),fmtUSD(route.newExp),fmtUSD(saved))}</p>
+        <p className="text-slate-300 text-sm leading-relaxed">{t.missionBody(route.name,fmtC(data.expenses,lang),fmtC(route.newExp,lang),fmtC(saved,lang))}</p>
       </div>
       <div className="flex gap-3 anim-fiu d5 pb-6">
         <button onClick={onReset} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition-all">{t.recalc}</button>

@@ -1,10 +1,8 @@
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', 'Sarabun', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   background: #020209;
 }
@@ -13,37 +11,37 @@ body {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.75); }
+  from { opacity: 0; transform: scale(0.72); }
   to   { opacity: 1; transform: scale(1); }
 }
-
-@keyframes barGrow {
-  from { width: 0%; }
+@keyframes breathe {
+  0%, 100% { opacity: .18; transform: scale(1); }
+  50%       { opacity: .32; transform: scale(1.08); }
 }
 
-.animate-fade-in-up  { animation: fadeInUp 0.5s ease both; }
-.animate-fade-in     { animation: fadeIn 0.4s ease both; }
-.animate-scale-in    { animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+.anim-fiu { animation: fadeInUp .48s ease both; }
+.anim-fi  { animation: fadeIn .38s ease both; }
+.anim-si  { animation: scaleIn .52s cubic-bezier(.175,.885,.32,1.275) both; }
 
-.delay-100 { animation-delay: 0.10s; }
-.delay-200 { animation-delay: 0.20s; }
-.delay-300 { animation-delay: 0.30s; }
-.delay-400 { animation-delay: 0.40s; }
-.delay-500 { animation-delay: 0.50s; }
+.d1 { animation-delay: .08s; }
+.d2 { animation-delay: .16s; }
+.d3 { animation-delay: .24s; }
+.d4 { animation-delay: .32s; }
+.d5 { animation-delay: .40s; }
+.d6 { animation-delay: .50s; }
 
-/* Remove number input spinners */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-input[type="number"] { -moz-appearance: textfield; }
+.glow-orb { animation: breathe 5s ease-in-out infinite; }
+.bar-grow  { transition: width 1s ease; }
 
-/* Scrollbar */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }

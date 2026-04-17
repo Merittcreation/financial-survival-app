@@ -1,59 +1,50 @@
 import { useState, useEffect } from 'react'
+import LandingScreen from './components/LandingScreen'
 import InputScreen from './components/InputScreen'
 import ResultScreen from './components/ResultScreen'
 import RoutesScreen from './components/RoutesScreen'
 import ProgressScreen from './components/ProgressScreen'
 
-const KEY = 'fsa_v1'
+const KEY = 'fsa_v3'
 
 export default function App() {
-  const [screen, setScreen] = useState('input')
-  const [userData, setUserData] = useState(null)
-  const [chosenRoute, setChosenRoute] = useState(null)
+  const [screen, setScreen] = useState('landing')
+  const [data, setData] = useState(null)
+  const [route, setRoute] = useState(null)
+  const [lang, setLang] = useState('en')
 
-  // Restore session from localStorage
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(KEY))
-      if (saved?.userData) {
-        setUserData(saved.userData)
-        setChosenRoute(saved.chosenRoute || null)
-        setScreen(saved.screen || 'result')
+      const s = JSON.parse(localStorage.getItem(KEY))
+      if (s?.data) {
+        setData(s.data)
+        setRoute(s.route || null)
+        setScreen(s.screen || 'result')
+        setLang(s.lang || 'en')
       }
     } catch {}
   }, [])
 
-  const persist = (data, route, s) => {
-    try { localStorage.setItem(KEY, JSON.stringify({ userData: data, chosenRoute: route, screen: s })) } catch {}
+  const save = (d, r, sc, lg) => {
+    try { localStorage.setItem(KEY, JSON.stringify({ data: d, route: r, screen: sc, lang: lg })) } catch {}
   }
 
-  const handleSubmit = (data) => {
-    setUserData(data)
-    setChosenRoute(null)
-    setScreen('result')
-    persist(data, null, 'result')
-  }
+  const go = (sc, d = data, r = route, lg = lang) => { setScreen(sc); save(d, r, sc, lg) }
+  const changeLang = l => { setLang(l); save(data, route, screen, l) }
+  const submit = d => { setData(d); setRoute(null); go('result', d, null, lang) }
+  const choose = r => { setRoute(r); go('progress', data, r, lang) }
+  const reset = () => { setData(null); setRoute(null); setScreen('landing'); localStorage.removeItem(KEY) }
 
-  const handleChooseRoute = (route) => {
-    setChosenRoute(route)
-    setScreen('progress')
-    persist(userData, route, 'progress')
-  }
-
-  const handleReset = () => {
-    setUserData(null)
-    setChosenRoute(null)
-    setScreen('input')
-    localStorage.removeItem(KEY)
-  }
+  const lp = { lang, setLang: changeLang }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
+    <div className="min-h-screen bg-slate-950 text-white" style={{ fontFamily: "'Inter','Sarabun',sans-serif" }}>
       <div className="max-w-md mx-auto min-h-screen">
-        {screen === 'input'    && <InputScreen onSubmit={handleSubmit} />}
-        {screen === 'result'   && userData && <ResultScreen data={userData} onContinue={() => { setScreen('routes'); persist(userData, null, 'routes') }} onReset={handleReset} />}
-        {screen === 'routes'   && userData && <RoutesScreen data={userData} onChooseRoute={handleChooseRoute} onBack={() => { setScreen('result'); persist(userData, null, 'result') }} />}
-        {screen === 'progress' && userData && chosenRoute && <ProgressScreen data={userData} route={chosenRoute} onBack={() => { setScreen('routes'); persist(userData, null, 'routes') }} onReset={handleReset} />}
+        {screen === 'landing'  && <LandingScreen  onStart={() => go('input')} {...lp} />}
+        {screen === 'input'    && <InputScreen    onSubmit={submit} onBack={() => go('landing')} {...lp} />}
+        {screen === 'result'   && data  && <ResultScreen   data={data} onContinue={() => go('routes')} onReset={reset} {...lp} />}
+        {screen === 'routes'   && data  && <RoutesScreen   data={data} onChoose={choose} onBack={() => go('result')} {...lp} />}
+        {screen === 'progress' && data  && route && <ProgressScreen data={data} route={route} onBack={() => go('routes')} onReset={reset} {...lp} />}
       </div>
     </div>
   )

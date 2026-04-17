@@ -496,7 +496,7 @@ function ResultScreen({data,onContinue,onReset,lang,setLang}){
 ═══════════════════════════════════════ */
 const IMPACT_CLS={'very high':'bg-rose-500/15 text-rose-400','high':'bg-blue-500/15 text-blue-400','medium':'bg-amber-500/15 text-amber-400','low':'bg-slate-600/30 text-slate-400'};
 
-function RouteCard({r,base,onChoose,delay,t}){
+function RouteCard({r,base,onChoose,delay,t,lang}){
   const[open,setOpen]=useState(false);
   const pct=Math.min((r.newDays/Math.max(r.newDays*1.2,180))*100,100);
   return(
@@ -579,7 +579,7 @@ function RoutesScreen({data,onChoose,onBack,lang,setLang}){
         ))}
       </div>
       <div className="flex flex-col gap-4 pb-10">
-        {routes.map((r,i)=><RouteCard key={r.id} r={r} base={base} onChoose={onChoose} delay={i*.09} t={t}/>)}
+        {routes.map((r,i)=><RouteCard key={r.id} r={r} base={base} onChoose={onChoose} delay={i*.09} t={t} lang={lang}/>)}
       </div>
     </div>
   );

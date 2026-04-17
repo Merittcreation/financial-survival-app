@@ -95,11 +95,22 @@ function RouteCard({ r, base, onChoose, delay, t, lang }) {
 }
 
 export default function RoutesScreen({ data, onChoose, onBack, lang, setLang }) {
-  const t = T[lang]
-  const routes = buildRoutes(data, t)
-  const base = calcDays(data.cash, data.expenses)
+  const t = T[lang] || T['en']
+  let routes, base
+  try {
+    routes = buildRoutes(data, t)
+    base = calcDays(data.cash, data.expenses)
+  } catch (e) {
+    return (
+      <div style={{ minHeight:'100vh', background:'#020209', color:'white', padding:'24px', fontFamily:'monospace' }}>
+        <h2 style={{ color:'#f87171', marginBottom:'12px' }}>Error loading plan</h2>
+        <pre style={{ color:'#fca5a5', fontSize:'12px', whiteSpace:'pre-wrap' }}>{String(e)}</pre>
+        <button onClick={onBack} style={{ marginTop:'20px', padding:'12px 24px', background:'#10b981', color:'white', border:'none', borderRadius:'8px', cursor:'pointer' }}>← Back</button>
+      </div>
+    )
+  }
   const status = getStatus(base)
-  const statusLabel = t[status.tier + 'Label'] || t.stableLabel
+  const statusLabel = t[status.tier + 'Label'] || t.stableLabel || 'STABLE'
 
   return (
     <div className="min-h-screen flex flex-col px-6 py-10">

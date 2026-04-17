@@ -19,7 +19,8 @@ export default function App() {
       if (s?.data) {
         setData(s.data)
         setRoute(s.route || null)
-        setScreen(s.screen || 'result')
+        const sc = s.screen === 'progress' && s.route ? 'progress' : 'result'
+        setScreen(sc)
         setLang(s.lang || 'en')
       }
     } catch {}

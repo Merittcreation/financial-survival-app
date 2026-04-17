@@ -7,18 +7,678 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter','Sarabun','system-ui','sans-serif'] }
-        }
-      }
-    }
-  </script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','Sarabun','system-ui','sans-serif'] } } } }</script>
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0; background:#020209; -webkit-font-smoothing:antialiased; }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+    @keyframes scaleIn  { from{opacity:0;transform:scale(.72)} to{opacity:1;transform:scale(1)} }
+    @keyframes breathe  { 0%,100%{opacity:.18;transform:scale(1)} 50%{opacity:.32;transform:scale(1.08)} }
+    .anim-fiu{animation:fadeInUp .48s ease both}
+    .anim-fi {animation:fadeIn   .38s ease both}
+    .anim-si {animation:scaleIn  .52s cubic-bezier(.175,.885,.32,1.275) both}
+    .d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}
+    .d4{animation-delay:.32s}.d5{animation-delay:.40s}.d6{animation-delay:.50s}
+    .glow-orb{animation:breathe 5s ease-in-out infinite}
+    .bar-grow{transition:width 1s ease}
+    input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+    input[type=number]{-moz-appearance:textfield}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+  </style>
 </head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
+<body class="bg-slate-950 text-white">
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const T = {
+  en: {
+    brand:'Financial Survival',
+    heroLine1:'How long can you survive',
+    heroLine2:'without income?',
+    heroSub:'Most people guess wrong. Find out the real number in 30 seconds.',
+    ctaBtn:'Find Out Now →',
+    ctaNote:'No account · No data stored online · 30 seconds',
+    whereLabel:'Where will you land?',
+    criticalLabel:'CRITICAL', riskyLabel:'RISKY', stableLabel:'STABLE',
+    under30:'Under 30 days', days3090:'30 – 90 days', days90p:'90+ days',
+    back:'← Back', startOver:'← Start over',
+    yourNumbers:'YOUR NUMBERS',
+    inputTitle:'Just 4 numbers.',
+    inputSub:'Totally honest. No judgment.',
+    fieldLabels:{ cash:'Cash on hand', income:'Monthly income', expenses:'Monthly expenses', debt:'Total debt' },
+    fieldHints:{
+      cash:'Savings + checking — money available right now',
+      income:'Take-home pay after taxes',
+      expenses:'Rent, food, bills, transport, subscriptions',
+      debt:'Credit cards, loans, BNPL (enter 0 if none)',
+    },
+    required:'Required',
+    submitBtn:'Show Me My Number →',
+    dataNote:'Your data never leaves this device',
+    youCanSurvive:'You can survive',
+    days:'days',
+    meterL:'0 days', meterR:'1 year',
+    critMeter:'CRITICAL <30', riskMeter:'RISKY 30–90', stabMeter:'STABLE 90+',
+    monthlyBurn:'Monthly burn', savingsRate:'Savings rate', debtIncome:'Debt/income',
+    gameplanBtn:'See Your Game Plan →',
+    gameplanSub:'3 routes to more runway. Pick what fits your life.',
+    heresPlan:"Here's your game plan",
+    youHave:'You have', rightNow:'right now. Pick a route and change that number.',
+    safeTag:'Safe', seriousTag:'Serious', extremeTag:'Extreme',
+    daysRunway:'days runway', daysGained:'days',
+    nowLabel:'Now:', afterLabel:'After:',
+    showActions:'Show concrete actions', hideActions:'Hide actions',
+    spendCut:'spend',
+    chooseBtn:"I'll Do This →",
+    routeA:{ name:'Play It Safe',  sub:'Small wins, zero drama',      desc:"Easy wins you can start this week. You won't even feel them — but they add up." },
+    routeB:{ name:'Get Serious',   sub:'Real changes, real results',   desc:"Takes commitment — but you'll see results within 30 days. Most people start here." },
+    routeC:{ name:'All In',        sub:'Maximum impact. No excuses.',  desc:"The nuclear option. Optimizing for survival, not comfort. Use when you need max results fast." },
+    weekProjection:'Your 8-week projection',
+    stickToPlan:'Stick to the plan. Watch your runway grow.',
+    today:'Today', after8w:'After 8 weeks',
+    daysGainedFull:'days gained from today',
+    weekByWeek:'Week-by-week progress',
+    keyMilestones:'Key milestones',
+    missionTitle:'Your mission:',
+    missionBody:(route,from,to,saved)=>`Follow ${route} for 8 weeks. Cut monthly expenses from ${from} down to ${to}. That's ${saved}/month freed up — every dollar extends your runway.`,
+    recalc:'Recalculate', tryOther:'Try Another Route',
+    weekLabels:['First cuts made','Habits forming','Momentum building','New normal','System working','Compounding','Crushing it','Goal reached'],
+    advisorMsg:(days,tier)=>{
+      if(tier==='critical'){
+        if(days===0) return "Zero runway — every day you wait costs you options. But you can change this.";
+        if(days<=7)  return `${days} days. I need you to act today. The good news: this is fixable fast.`;
+        if(days<=14) return `${days} days is your window. The right moves now can triple this number.`;
+        return `${days} days — less than a month. Tight, but I've seen people turn this around in weeks.`;
+      }
+      if(tier==='risky'){
+        if(days<60) return `${days} days. About ${Math.ceil(days/30)} months. You have time to act — just not time to waste.`;
+        return `${days} days. Three months is workable. A few focused changes and you'll be in a stronger spot.`;
+      }
+      if(days<=180) return `${days} days — that's solid. You're ahead of most people. Let's push it even higher.`;
+      return `${days} days? That's over ${Math.floor(days/30)} months. Genuinely impressive. You've built real resilience.`;
+    },
+    actionsA:({ income, expenses })=>{
+      const a=[];
+      if(expenses*.35>income*.30) a.push({t:"Find a roommate — cut rent 30–40% overnight",i:'high'});
+      a.push({t:"Cancel every subscription unused in the last 30 days",i:'medium'});
+      a.push({t:"Cook at home 5 nights a week — eating out is the biggest food budget killer",i:'medium'});
+      a.push({t:"Negotiate a cheaper phone or internet plan — takes 20 mins, saves every month",i:'low'});
+      a.push({t:"Use cashback apps on every purchase (Honey, Rakuten)",i:'low'});
+      return a.slice(0,4);
+    },
+    actionsB:({ income, expenses, debt })=>{
+      const a=[];
+      a.push({t:"Negotiate your rent — landlords almost always prefer keeping good tenants",i:'high'});
+      a.push({t:"Start freelancing on weekends using your current skills — even 10 hrs/week helps",i:'high'});
+      a.push({t:"Sell unused items: electronics, clothes, gear, furniture — list everything now",i:'medium'});
+      a.push(debt>income*2?{t:"Consolidate high-interest debt to cut your monthly payment significantly",i:'high'}:{t:"Drive rideshare or do food delivery evenings — $300–600/mo extra is real",i:'medium'});
+      a.push({t:"Meal prep every Sunday — 40% food savings, zero willpower needed during the week",i:'medium'});
+      return a.slice(0,5);
+    },
+    actionsC:()=>[
+      {t:"Downsize your home or rent out a spare room — housing is usually the #1 cost",i:'very high'},
+      {t:"Sell your car — switch to transit, bike, or rideshare and pocket the difference",i:'very high'},
+      {t:"Take a second job or go full-time freelance immediately — no half-measures",i:'very high'},
+      {t:"Liquidate non-essentials: gadgets, jewelry, collectibles, gym equipment",i:'high'},
+      {t:"Apply for every gig you qualify for: tutoring, delivery, VA work, dog walking",i:'high'},
+    ],
+  },
+  th: {
+    brand:'แผนรอดชีวิตทางการเงิน',
+    heroLine1:'คุณอยู่ได้กี่วัน',
+    heroLine2:'ถ้าไม่มีรายได้?',
+    heroSub:'คนส่วนใหญ่เดาผิด รู้คำตอบที่แท้จริงใน 30 วินาที',
+    ctaBtn:'รู้เลยตอนนี้ →',
+    ctaNote:'ไม่ต้องสมัคร · ข้อมูลไม่ออกจากเครื่อง · 30 วินาที',
+    whereLabel:'คุณอยู่ในกลุ่มไหน?',
+    criticalLabel:'วิกฤต', riskyLabel:'เสี่ยง', stableLabel:'ปลอดภัย',
+    under30:'ไม่ถึง 30 วัน', days3090:'30 – 90 วัน', days90p:'90+ วัน',
+    back:'← กลับ', startOver:'← เริ่มใหม่',
+    yourNumbers:'ข้อมูลของคุณ',
+    inputTitle:'แค่ 4 ตัวเลข',
+    inputSub:'ตอบตามจริง ไม่ตัดสิน',
+    fieldLabels:{ cash:'เงินสดในมือ', income:'รายได้ต่อเดือน', expenses:'ค่าใช้จ่ายต่อเดือน', debt:'หนี้รวมทั้งหมด' },
+    fieldHints:{
+      cash:'เงินออม + บัญชีธนาคาร — เงินที่เข้าถึงได้ตอนนี้',
+      income:'เงินเดือนที่รับจริงหลังหักภาษี',
+      expenses:'ค่าเช่า อาหาร ค่าน้ำไฟ ค่าเดินทาง ค่าสมาชิกต่างๆ',
+      debt:'บัตรเครดิต สินเชื่อ ผ่อนสินค้า (ใส่ 0 ถ้าไม่มี)',
+    },
+    required:'จำเป็น',
+    submitBtn:'คำนวณผลของฉัน →',
+    dataNote:'ข้อมูลของคุณไม่ออกจากเครื่องนี้',
+    youCanSurvive:'คุณอยู่ได้',
+    days:'วัน',
+    meterL:'0 วัน', meterR:'1 ปี',
+    critMeter:'วิกฤต <30', riskMeter:'เสี่ยง 30–90', stabMeter:'ปลอดภัย 90+',
+    monthlyBurn:'ใช้จ่าย/เดือน', savingsRate:'อัตราออม', debtIncome:'หนี้/รายได้',
+    gameplanBtn:'ดูแผนของฉัน →',
+    gameplanSub:'3 เส้นทาง เพิ่มวันรอดชีวิต เลือกที่เหมาะกับคุณ',
+    heresPlan:'นี่คือแผนของคุณ',
+    youHave:'ตอนนี้คุณมี', rightNow:'วัน เลือกเส้นทางแล้วเปลี่ยนตัวเลขนั้น',
+    safeTag:'ปลอดภัย', seriousTag:'จริงจัง', extremeTag:'สุดขีด',
+    daysRunway:'วันที่รอดได้', daysGained:'วัน',
+    nowLabel:'ตอนนี้:', afterLabel:'หลังทำ:',
+    showActions:'ดูสิ่งที่ต้องทำ', hideActions:'ซ่อน',
+    spendCut:'ค่าใช้จ่าย',
+    chooseBtn:'ฉันจะทำแบบนี้ →',
+    routeA:{ name:'เริ่มง่ายๆ',  sub:'ปรับเล็กน้อย ไม่เจ็บปวด',  desc:'ทำได้สัปดาห์นี้เลย แทบไม่รู้สึก แต่สะสมแล้วได้ผลจริง' },
+    routeB:{ name:'จริงจังขึ้น', sub:'เปลี่ยนจริง ได้ผลจริง',    desc:'ต้องใช้ความตั้งใจ แต่เห็นผลภายใน 30 วัน คนส่วนใหญ่เริ่มที่นี่' },
+    routeC:{ name:'ทุ่มสุดตัว',  sub:'สูงสุด ไม่มีข้อแม้',        desc:'ทางเลือกสุดขีด เอาความอยู่รอดเป็นที่ตั้ง ใช้เมื่อต้องการผลสูงสุดด่วน' },
+    weekProjection:'การคาดการณ์ 8 สัปดาห์',
+    stickToPlan:'ทำตามแผน แล้วดูตัวเลขเพิ่มขึ้น',
+    today:'วันนี้', after8w:'หลัง 8 สัปดาห์',
+    daysGainedFull:'วันที่เพิ่มขึ้นจากวันนี้',
+    weekByWeek:'ความคืบหน้าแต่ละสัปดาห์',
+    keyMilestones:'เป้าหมายสำคัญ',
+    missionTitle:'ภารกิจของคุณ:',
+    missionBody:(route,from,to,saved)=>`ทำตามแผน ${route} เป็นเวลา 8 สัปดาห์ ลดค่าใช้จ่ายจาก ${from} ให้เหลือ ${to} นั่นคือ ${saved}/เดือนที่ประหยัดได้ — ทุกบาทช่วยเพิ่มวันรอดชีวิต`,
+    recalc:'คำนวณใหม่', tryOther:'ลองเส้นทางอื่น',
+    weekLabels:['เริ่มลดค่าใช้จ่าย','นิสัยกำลังก่อตัว','ได้โมเมนตัม','ชีวิตปกติใหม่','ระบบทำงานแล้ว','สะสมผลลัพธ์','สุดยอดมาก','ถึงเป้าหมาย'],
+    advisorMsg:(days,tier)=>{
+      if(tier==='critical'){
+        if(days===0) return "ไม่มีเงินสำรองเลย อย่ารอช้า ยิ่งช้ายิ่งเสียโอกาส แต่ยังแก้ได้";
+        if(days<=7)  return `${days} วัน ต้องลงมือวันนี้เลย ข่าวดี: แก้ได้เร็วถ้าเริ่มเดี๋ยวนี้`;
+        if(days<=14) return `${days} วันคือโอกาสของคุณ ถ้าเดินถูกทางตอนนี้ ตัวเลขนี้เพิ่มได้สามเท่า`;
+        return `${days} วัน ไม่ถึงเดือน ตึงมือ แต่เคยเห็นคนพลิกสถานการณ์ได้ในไม่กี่สัปดาห์`;
+      }
+      if(tier==='risky'){
+        if(days<60) return `${days} วัน ราว ${Math.ceil(days/30)} เดือน มีเวลาพอ แต่อย่าปล่อยให้เสียเปล่า`;
+        return `${days} วัน สามเดือนพอทำอะไรได้ ปรับไม่กี่อย่างก็แข็งแกร่งขึ้นมาก`;
+      }
+      if(days<=180) return `${days} วัน — ดีมาก คุณนำหน้าคนส่วนใหญ่แล้ว มาผลักให้สูงกว่านี้กัน`;
+      return `${days} วัน? นั่นคือกว่า ${Math.floor(days/30)} เดือน น่าประทับใจมาก คุณสร้างความมั่นคงได้จริง`;
+    },
+    actionsA:({ income, expenses })=>{
+      const a=[];
+      if(expenses*.35>income*.30) a.push({t:'หาคนมาเช่าห้องด้วย — ลดค่าเช่าได้ทันที 30–40%',i:'high'});
+      a.push({t:'ยกเลิก subscription ที่ไม่ได้ใช้ใน 30 วันที่ผ่านมาทั้งหมด',i:'medium'});
+      a.push({t:'ทำอาหารกินเองที่บ้าน 5 คืน/สัปดาห์ — ค่าอาหารนอกบ้านคือตัวร้ายอันดับ 1',i:'medium'});
+      a.push({t:'ต่อรองแพ็กเกจมือถือหรืออินเทอร์เน็ต — ใช้เวลา 20 นาที ประหยัดทุกเดือน',i:'low'});
+      a.push({t:'ใช้แอปคืนเงิน/โค้ดส่วนลดทุกครั้งที่ซื้อของ',i:'low'});
+      return a.slice(0,4);
+    },
+    actionsB:({ income, expenses, debt })=>{
+      const a=[];
+      a.push({t:'ต่อรองค่าเช่ากับเจ้าของบ้าน — เจ้าของส่วนใหญ่ชอบคนเช่าที่ดีมากกว่าหาคนใหม่',i:'high'});
+      a.push({t:'รับงาน freelance สุดสัปดาห์โดยใช้ทักษะที่มีอยู่ — แค่ 10 ชม./สัปดาห์ก็ช่วยได้',i:'high'});
+      a.push({t:'ขายของที่ไม่ใช้ผ่าน Facebook Marketplace: อุปกรณ์ไฟฟ้า เสื้อผ้า เฟอร์นิเจอร์',i:'medium'});
+      a.push(debt>income*2?{t:'รวมหนี้ดอกเบี้ยสูงให้เป็นก้อนเดียว เพื่อลดยอดจ่ายรายเดือน',i:'high'}:{t:'ขับ Grab/Bolt หรือส่งอาหารช่วงเย็น — เพิ่มได้ 3,000–6,000 บาท/เดือน',i:'medium'});
+      a.push({t:'เตรียมอาหารทุกวันอาทิตย์ — ประหยัดค่าอาหาร 40% โดยไม่ต้องฝืนใจระหว่างสัปดาห์',i:'medium'});
+      return a.slice(0,5);
+    },
+    actionsC:()=>[
+      {t:'ย้ายไปอยู่ที่เล็กลง หรือปล่อยเช่าห้องว่าง — ที่อยู่อาศัยมักเป็นค่าใช้จ่ายอันดับ 1',i:'very high'},
+      {t:'ขายรถ แล้วใช้ขนส่งสาธารณะ/จักรยาน/แกร็บแทน ประหยัดได้มาก',i:'very high'},
+      {t:'รับงานที่สองหรือทำ freelance เต็มเวลาทันที ไม่มีข้อแม้',i:'very high'},
+      {t:'ขายของที่ไม่จำเป็น: อุปกรณ์ไฟฟ้า เครื่องประดับ ของสะสม อุปกรณ์ออกกำลังกาย',i:'high'},
+      {t:'สมัครงาน gig ทุกอย่างที่ทำได้: ติวหนังสือ ส่งอาหาร งาน VA งานอิสระออนไลน์',i:'high'},
+    ],
+  },
+};
+
+function calcDays(cash,expenses){
+  if(!cash||cash<=0)return 0;
+  if(!expenses||expenses<=0)return 999;
+  return Math.floor(cash/(expenses/30));
+}
+function getStatus(days){
+  if(days<30)  return{tier:'critical',tc:'text-red-400',   bc:'border-red-500',   bg:'bg-red-500/10',   bar:'bg-red-500',   glow:'rgba(239,68,68,.3)',  tagBg:'bg-red-500/15 border-red-500/40'};
+  if(days<90)  return{tier:'risky',   tc:'text-amber-400', bc:'border-amber-500', bg:'bg-amber-500/10', bar:'bg-amber-500', glow:'rgba(245,158,11,.3)', tagBg:'bg-amber-500/15 border-amber-500/40'};
+  return             {tier:'stable',  tc:'text-emerald-400',bc:'border-emerald-500',bg:'bg-emerald-500/10',bar:'bg-emerald-500',glow:'rgba(16,185,129,.3)',tagBg:'bg-emerald-500/15 border-emerald-500/40'};
+}
+function buildRoutes(data,t){
+  const base=calcDays(data.cash,data.expenses);
+  const mk=(id,cut,mult,colorKey,rk)=>({
+    id, cut:`${cut}%`, mult,
+    ...(rk==='a'?t.routeA:rk==='b'?t.routeB:t.routeC),
+    ...(colorKey==='green' ?{cb:'border-emerald-500/40',at:'text-emerald-400',ab:'bg-emerald-500/10',bar:'bg-emerald-500',btn:'bg-emerald-600 hover:bg-emerald-500'}:
+        colorKey==='amber' ?{cb:'border-amber-500/40',  at:'text-amber-400',  ab:'bg-amber-500/10',  bar:'bg-amber-500',  btn:'bg-amber-600 hover:bg-amber-500'}:
+                            {cb:'border-rose-500/40',   at:'text-rose-400',   ab:'bg-rose-500/10',   bar:'bg-rose-500',   btn:'bg-rose-700 hover:bg-rose-600'}),
+    newExp:data.expenses*mult,
+    newDays:calcDays(data.cash,data.expenses*mult),
+    gain:calcDays(data.cash,data.expenses*mult)-base,
+    actions:(rk==='a'?t.actionsA:rk==='b'?t.actionsB:t.actionsC)(data),
+  });
+  return[mk('a',15,.85,'green','a'),mk('b',30,.70,'amber','b'),mk('c',50,.50,'rose','c')];
+}
+function buildWeeks(base,route,t,n=8){
+  return Array.from({length:n},(_,i)=>{
+    const gained=Math.floor(route.gain*Math.pow((i+1)/n,0.65));
+    return{week:i+1,days:base+gained,gained,label:t.weekLabels[i]};
+  });
+}
+function fmtC(n,lang){
+  return lang==='th'
+    ? new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:0}).format(n)
+    : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
+}
+
+function LangToggle({lang,setLang}){
+  return(
+    <div className="flex items-center bg-slate-800 rounded-full p-0.5 gap-0.5">
+      {['en','th'].map(l=>(
+        <button key={l} onClick={()=>setLang(l)}
+          className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${lang===l?'bg-emerald-500 text-white shadow':'text-slate-400 hover:text-slate-200'}`}>
+          {l==='en'?'EN':'ไทย'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function useCountUp(target,ms=1400){
+  const[v,setV]=useState(0);
+  useEffect(()=>{
+    if(target<=0)return;
+    const steps=Math.min(target,80); let cur=0;
+    const ti=setInterval(()=>{
+      cur+=target/steps;
+      if(cur>=target){setV(target);clearInterval(ti);}
+      else setV(Math.floor(cur));
+    },ms/steps);
+    return()=>clearInterval(ti);
+  },[target]);
+  return v;
+}
+
+function LandingScreen({onStart,lang,setLang}){
+  const t=T[lang];
+  return(
+    <div className="min-h-screen flex flex-col px-6 py-10 relative overflow-hidden">
+      <div className="glow-orb absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-emerald-500 blur-3xl pointer-events-none"/>
+      <div className="anim-fi relative z-10 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-sm">⚡</div>
+          <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">{t.brand}</span>
+        </div>
+        <LangToggle lang={lang} setLang={setLang}/>
+      </div>
+      <div className="flex-1 flex flex-col justify-center relative z-10 -mt-6">
+        <div className="anim-fiu d1 mb-8">
+          <h1 className="text-[2.6rem] font-black text-white leading-[1.1] mb-5">
+            {t.heroLine1}<br/>
+            <span className="text-emerald-400">{t.heroLine2}</span>
+          </h1>
+          <p className="text-slate-400 text-base leading-relaxed">{t.heroSub}</p>
+        </div>
+        <div className="anim-fiu d2 mb-10">
+          <button onClick={onStart} className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 active:scale-[.98] text-white font-black text-xl rounded-2xl transition-all shadow-2xl shadow-emerald-500/25">
+            {t.ctaBtn}
+          </button>
+          <p className="text-center text-slate-600 text-xs mt-3">{t.ctaNote}</p>
+        </div>
+        <div className="anim-fiu d3">
+          <p className="text-slate-600 text-xs uppercase tracking-widest font-semibold mb-3 text-center">{t.whereLabel}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              {dot:'🔴',lk:'criticalLabel',sk:'under30', bg:'bg-red-500/10',    bd:'border-red-500/25',   tc:'text-red-400'},
+              {dot:'🟡',lk:'riskyLabel',   sk:'days3090',bg:'bg-amber-500/10',  bd:'border-amber-500/25', tc:'text-amber-400'},
+              {dot:'🟢',lk:'stableLabel',  sk:'days90p', bg:'bg-emerald-500/10',bd:'border-emerald-500/25',tc:'text-emerald-400'},
+            ].map(s=>(
+              <div key={s.lk} className={`${s.bg} border ${s.bd} rounded-xl p-3 text-center`}>
+                <div className="text-lg mb-1">{s.dot}</div>
+                <div className={`${s.tc} font-black text-xs`}>{t[s.lk]}</div>
+                <div className="text-slate-600 text-xs mt-0.5">{t[s.sk]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const FIELD_IDS=['cash','income','expenses','debt'];
+const FIELD_REQ={cash:true,income:true,expenses:true,debt:false};
+
+function InputScreen({onSubmit,onBack,lang,setLang}){
+  const t=T[lang];
+  const[vals,setVals]=useState({cash:'',income:'',expenses:'',debt:''});
+  const[errs,setErrs]=useState({});
+  const[focus,setFocus]=useState(null);
+  const firstRef=useRef(null);
+  useEffect(()=>{firstRef.current?.focus();},[]);
+  const change=(id,raw)=>{setVals(p=>({...p,[id]:raw.replace(/[^0-9]/g,'')}));if(errs[id])setErrs(p=>({...p,[id]:null}));};
+  const disp=id=>{const v=vals[id];if(!v)return'';return focus===id?v:new Intl.NumberFormat('en-US').format(v);};
+  const submit=e=>{
+    e.preventDefault();
+    const e2={};
+    FIELD_IDS.filter(f=>FIELD_REQ[f]).forEach(f=>{if(!vals[f])e2[f]=t.required;});
+    if(Object.keys(e2).length){setErrs(e2);return;}
+    onSubmit({cash:+vals.cash||0,income:+vals.income||0,expenses:+vals.expenses||0,debt:+vals.debt||0});
+  };
+  return(
+    <div className="min-h-screen flex flex-col px-6 py-10">
+      <div className="anim-fiu flex items-center justify-between mb-8">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 text-sm transition-colors">{t.back}</button>
+        <LangToggle lang={lang} setLang={setLang}/>
+      </div>
+      <div className="anim-fiu d1 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center text-xs">⚡</div>
+          <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">{t.yourNumbers}</span>
+        </div>
+        <h1 className="text-2xl font-extrabold text-white leading-tight mb-1">{t.inputTitle}</h1>
+        <p className="text-slate-400 text-base">{t.inputSub}</p>
+      </div>
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        {FIELD_IDS.map((id,i)=>(
+          <div key={id} className={`anim-fiu d${i+1}`}>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+              {['💰','💵','📊','📋'][i]}&nbsp;{t.fieldLabels[id]}
+              {FIELD_REQ[id]&&<span className="text-red-400 ml-1">*</span>}
+            </label>
+            <div className={`flex items-center rounded-xl border transition-all duration-200 ${focus===id?'border-emerald-500 bg-slate-800/80 shadow-lg shadow-emerald-500/10':errs[id]?'border-red-500/70 bg-slate-900/80':'border-slate-700/60 bg-slate-900 hover:border-slate-600'}`}>
+              <span className="pl-4 text-slate-400 text-lg font-semibold select-none">{lang==='th'?'฿':'$'}</span>
+              <input ref={i===0?firstRef:null} type="text" inputMode="numeric"
+                value={disp(id)} onChange={e=>change(id,e.target.value)}
+                onFocus={()=>setFocus(id)} onBlur={()=>setFocus(null)}
+                placeholder={['1,500','2,500','2,000','0'][i]}
+                className="flex-1 bg-transparent py-4 px-2 text-white text-lg font-semibold placeholder-slate-700 outline-none"/>
+            </div>
+            {errs[id]?<p className="text-red-400 text-xs mt-1.5 ml-1">{errs[id]}</p>:<p className="text-slate-600 text-xs mt-1.5 ml-1">{t.fieldHints[id]}</p>}
+          </div>
+        ))}
+        <div className="anim-fiu d5 mt-2 pb-10">
+          <button type="submit" className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[.98] text-white font-bold text-lg rounded-xl transition-all shadow-xl shadow-emerald-500/20">{t.submitBtn}</button>
+          <p className="text-center text-slate-600 text-xs mt-3">{t.dataNote}</p>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function ResultScreen({data,onContinue,onReset,lang,setLang}){
+  const t=T[lang];
+  const days=calcDays(data.cash,data.expenses);
+  const status=getStatus(days);
+  const count=useCountUp(days);
+  const msg=t.advisorMsg(days,status.tier);
+  const savRate=data.income>0?Math.round(((data.income-data.expenses)/data.income)*100):0;
+  const dti=data.income>0?(data.debt/data.income).toFixed(1):'—';
+  const meterPct=Math.min((days/365)*100,100);
+  const statusLabel=t[status.tier+'Label'];
+  const dot=status.tier==='critical'?'🔴':status.tier==='risky'?'🟡':'🟢';
+  return(
+    <div className="min-h-screen flex flex-col px-6 py-10">
+      <div className="anim-fi flex items-center justify-between mb-8">
+        <button onClick={onReset} className="text-slate-500 hover:text-slate-300 text-sm transition-colors">{t.startOver}</button>
+        <div className="flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-xs font-black tracking-widest border ${status.tagBg} ${status.tc}`}>{dot} {statusLabel}</span>
+          <LangToggle lang={lang} setLang={setLang}/>
+        </div>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center -mt-6">
+        <p className="anim-fi text-slate-400 text-base mb-5">{t.youCanSurvive}</p>
+        <div className={`anim-si flex items-center justify-center w-52 h-52 rounded-full border-4 ${status.bc} ${status.bg} mb-4`} style={{boxShadow:`0 0 80px ${status.glow}`}}>
+          <div className="text-center">
+            <div className={`text-[4.5rem] leading-none font-black ${status.tc}`}>{count}</div>
+            <div className="text-slate-300 text-xl font-semibold mt-1">{t.days}</div>
+          </div>
+        </div>
+        <div className={`anim-fiu d1 w-full ${status.bg} border ${status.bc} rounded-2xl px-5 py-4 mb-6 text-center`}>
+          <p className="text-slate-200 text-sm leading-relaxed">{msg}</p>
+        </div>
+        <div className="w-full anim-fiu d2">
+          <div className="flex justify-between text-xs text-slate-600 mb-2"><span>{t.meterL}</span><span>{t.meterR}</span></div>
+          <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full bar-grow ${status.bar}`} style={{width:`${meterPct}%`}}/>
+          </div>
+          <div className="flex justify-between text-xs mt-2">
+            <span className="text-slate-600">{t.critMeter}</span>
+            <span className="text-slate-600">{t.riskMeter}</span>
+            <span className="text-slate-600">{t.stabMeter}</span>
+          </div>
+        </div>
+        <div className="w-full grid grid-cols-3 gap-3 mt-6 anim-fiu d3">
+          {[{v:fmtC(data.expenses,lang),l:t.monthlyBurn,c:'text-white'},{v:`${savRate}%`,l:t.savingsRate,c:savRate>=15?'text-emerald-400':savRate>=0?'text-amber-400':'text-red-400'},{v:`${dti}x`,l:t.debtIncome,c:parseFloat(dti)<=2?'text-blue-400':'text-amber-400'}].map((s,i)=>(
+            <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+              <div className={`font-bold text-base ${s.c}`}>{s.v}</div>
+              <div className="text-slate-500 text-xs mt-0.5">{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="anim-fiu d4 mt-8 pb-6">
+        <button onClick={onContinue} className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[.98] text-white font-bold text-lg rounded-xl transition-all shadow-xl shadow-emerald-500/20">{t.gameplanBtn}</button>
+        <p className="text-center text-slate-600 text-xs mt-3">{t.gameplanSub}</p>
+      </div>
+    </div>
+  );
+}
+
+const IMPACT_CLS={'very high':'bg-rose-500/15 text-rose-400','high':'bg-blue-500/15 text-blue-400','medium':'bg-amber-500/15 text-amber-400','low':'bg-slate-600/30 text-slate-400'};
+
+// FIX: lang is now received as a prop (was causing ReferenceError before)
+function RouteCard({r,base,onChoose,delay,t,lang}){
+  const[open,setOpen]=useState(false);
+  const pct=Math.min((r.newDays/Math.max(r.newDays*1.2,180))*100,100);
+  const dSuffix=lang==='th'?'ว':'d';
+  return(
+    <div className="anim-fiu" style={{animationDelay:`${delay}s`}}>
+      <div className={`border ${r.cb} rounded-2xl bg-slate-900 overflow-hidden`}>
+        <div className="p-5">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xl">{r.id==='a'?'🛡️':r.id==='b'?'💪':'🔥'}</span>
+                <span className="font-bold text-white text-lg">{r.name}</span>
+              </div>
+              <p className="text-slate-500 text-sm">{r.sub}</p>
+            </div>
+            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ml-2 ${r.ab} ${r.at}`}>-{r.cut} {t.spendCut}</span>
+          </div>
+          <div className="flex items-end gap-3 mb-3">
+            <div>
+              <div className={`text-5xl font-black leading-none ${r.at}`}>{r.newDays}</div>
+              <div className="text-slate-500 text-sm mt-0.5">{t.daysRunway}</div>
+            </div>
+            <div className="pb-1">
+              <span className="bg-emerald-500/15 text-emerald-400 px-3 py-1 rounded-full text-sm font-bold">+{r.gain} {t.daysGained}</span>
+            </div>
+          </div>
+          <p className="text-slate-400 text-sm mb-4 leading-snug">{r.desc}</p>
+          <div className="mb-4">
+            <div className="flex justify-between text-xs text-slate-600 mb-1.5">
+              <span>{t.nowLabel} {base}{dSuffix}</span>
+              <span>{t.afterLabel} {r.newDays}{dSuffix}</span>
+            </div>
+            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${r.bar}`} style={{width:`${pct}%`}}/>
+            </div>
+          </div>
+          <button onClick={()=>setOpen(!open)} className={`text-sm font-semibold ${r.at} hover:opacity-75 flex items-center gap-1 transition-opacity`}>
+            <span>{open?'▲':'▼'}</span><span>{open?t.hideActions:`${t.showActions} (${r.actions.length})`}</span>
+          </button>
+        </div>
+        {open&&(
+          <div className={`border-t ${r.cb} px-5 py-4 space-y-3.5`}>
+            {r.actions.map((a,i)=>(
+              <div key={i} className="flex items-start gap-3">
+                <div className={`w-5 h-5 rounded-full ${r.ab} flex items-center justify-center shrink-0 mt-0.5`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${r.bar}`}/>
+                </div>
+                <p className="flex-1 text-slate-300 text-sm leading-snug">{a.t}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${IMPACT_CLS[a.i]||IMPACT_CLS.low}`}>{a.i}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="px-5 pb-5 pt-3">
+          <button onClick={()=>onChoose(r)} className={`w-full py-3 rounded-xl text-white font-bold transition-all active:scale-[.98] ${r.btn}`}>{t.chooseBtn}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RoutesScreen({data,onChoose,onBack,lang,setLang}){
+  const t=T[lang];
+  const routes=buildRoutes(data,t);
+  const base=calcDays(data.cash,data.expenses);
+  const status=getStatus(base);
+  const statusLabel=t[status.tier+'Label'];
+  return(
+    <div className="min-h-screen flex flex-col px-6 py-10">
+      <div className="anim-fi flex items-center justify-between mb-8">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 text-sm transition-colors">{t.back}</button>
+        <LangToggle lang={lang} setLang={setLang}/>
+      </div>
+      <div className="anim-fiu mb-6">
+        <h2 className="text-2xl font-extrabold text-white mb-2">{t.heresPlan}</h2>
+        <p className="text-slate-400 text-sm">{t.youHave} <span className={`font-bold ${status.tc}`}>{base}</span> {t.rightNow}</p>
+      </div>
+      <div className="anim-fiu d1 flex items-center gap-3 mb-5 text-xs text-slate-500">
+        {[['bg-emerald-500',t.safeTag],['bg-amber-500',t.seriousTag],['bg-rose-500',t.extremeTag]].map(([c,l])=>(
+          <span key={l} className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${c} inline-block`}/>{l}</span>
+        ))}
+      </div>
+      <div className="flex flex-col gap-4 pb-10">
+        {/* FIX: lang prop is now passed to RouteCard */}
+        {routes.map((r,i)=><RouteCard key={r.id} r={r} base={base} onChoose={onChoose} delay={i*.09} t={t} lang={lang}/>)}
+      </div>
+    </div>
+  );
+}
+
+function ProgressScreen({data,route,onBack,onReset,lang,setLang}){
+  const t=T[lang];
+  const base=calcDays(data.cash,data.expenses);
+  const weeks=buildWeeks(base,route,t,8);
+  const final=weeks[7].days;
+  const gain=final-base;
+  const status=getStatus(final);
+  const baseStatus=getStatus(base);
+  const maxDays=Math.max(final*1.1,90);
+  const saved=data.expenses-route.newExp;
+  const milestones=[0,2,4,7].map(i=>weeks[i]);
+  const statusLabel=t[status.tier+'Label'];
+  const baseLabel=t[baseStatus.tier+'Label'];
+  const dSuffix=lang==='th'?'ว':'d';
+  return(
+    <div className="min-h-screen flex flex-col px-6 py-10">
+      <div className="anim-fi flex items-center justify-between mb-8">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 text-sm transition-colors">{t.back}</button>
+        <LangToggle lang={lang} setLang={setLang}/>
+      </div>
+      <div className="anim-fiu mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xl">{route.id==='a'?'🛡️':route.id==='b'?'💪':'🔥'}</span>
+          <span className={`text-sm font-bold ${route.at}`}>{route.name}</span>
+        </div>
+        <h2 className="text-2xl font-extrabold text-white mb-1">{t.weekProjection}</h2>
+        <p className="text-slate-400 text-sm">{t.stickToPlan}</p>
+      </div>
+      <div className="anim-fiu d1 grid grid-cols-2 gap-3 mb-4">
+        {[[baseStatus,base,baseLabel,t.today],[status,final,statusLabel,t.after8w]].map(([st,d,lb,title])=>(
+          <div key={title} className={`${st.bg} border ${st.bc} rounded-2xl p-4 text-center`}>
+            <p className="text-slate-500 text-xs mb-1">{title}</p>
+            <div className={`text-4xl font-black ${st.tc}`}>{d}</div>
+            <div className="text-slate-500 text-xs mt-0.5">{t.days}</div>
+            <span className={`inline-block mt-2 text-xs font-bold ${st.tc}`}>{lb}</span>
+          </div>
+        ))}
+      </div>
+      <div className="anim-fiu d1 text-center mb-5">
+        <span className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-400 px-4 py-2 rounded-full text-sm font-bold">
+          ↑ +{gain} {t.daysGainedFull}
+        </span>
+      </div>
+      <div className="anim-fiu d2 bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-5">
+        <h3 className="text-sm font-semibold text-slate-300 mb-4">{t.weekByWeek}</h3>
+        <div className="space-y-2.5">
+          {weeks.map((w,i)=>(
+            <div key={w.week} className="flex items-center gap-3">
+              <div className="w-8 text-xs text-slate-600 text-right shrink-0">W{w.week}</div>
+              <div className="flex-1 h-6 bg-slate-800 rounded-lg overflow-hidden">
+                <div className={`h-full rounded-lg flex items-center px-2 bar-grow ${route.bar}`}
+                  style={{width:`${(w.days/maxDays)*100}%`,transitionDelay:`${i*.06}s`,opacity:0.6+i*.05}}>
+                  {(w.days/maxDays)>.22&&<span className="text-white text-xs font-semibold">{w.days}{dSuffix}</span>}
+                </div>
+              </div>
+              <div className="w-14 text-xs text-emerald-400 font-bold text-right shrink-0">+{w.gained}{dSuffix}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="anim-fiu d3 bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-5">
+        <h3 className="text-sm font-semibold text-slate-300 mb-4">{t.keyMilestones}</h3>
+        <div className="space-y-3">
+          {milestones.map((w,i)=>(
+            <div key={i} className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full ${route.ab} flex items-center justify-center shrink-0`}>
+                <span className={`text-xs font-black ${route.at}`}>{w.week}</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-slate-200 text-sm font-medium">{w.label}</p>
+                <p className="text-slate-500 text-xs">{w.days} {t.days}</p>
+              </div>
+              <span className="text-emerald-400 text-sm font-bold">+{w.gained}{dSuffix}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className={`anim-fiu d4 ${route.ab} border ${route.cb} rounded-2xl p-5 mb-8`}>
+        <p className={`${route.at} font-bold text-sm mb-2`}>{t.missionTitle}</p>
+        <p className="text-slate-300 text-sm leading-relaxed">{t.missionBody(route.name,fmtC(data.expenses,lang),fmtC(route.newExp,lang),fmtC(saved,lang))}</p>
+      </div>
+      <div className="flex gap-3 anim-fiu d5 pb-6">
+        <button onClick={onReset} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition-all">{t.recalc}</button>
+        <button onClick={onBack} className={`flex-1 py-3 ${route.btn} text-white font-bold rounded-xl transition-all active:scale-[.98]`}>{t.tryOther}</button>
+      </div>
+    </div>
+  );
+}
+
+const KEY='fsa_v3';
+function App(){
+  const[screen,setScreen]=useState('landing');
+  const[data,setData]=useState(null);
+  const[route,setRoute]=useState(null);
+  const[lang,setLang]=useState('en');
+
+  useEffect(()=>{
+    try{
+      const s=JSON.parse(localStorage.getItem(KEY));
+      if(s?.data){
+        setData(s.data);
+        setRoute(s.route||null);
+        // Never restore to 'routes' screen — it's transient and can loop-crash
+        const sc=s.screen==='progress'&&s.route?'progress':'result';
+        setScreen(sc);
+        setLang(s.lang||'en');
+      }
+    }catch{}
+  },[]);
+
+  const save=(d,r,sc,lg)=>{try{localStorage.setItem(KEY,JSON.stringify({data:d,route:r,screen:sc,lang:lg}));}catch{}};
+  const go=(sc,d=data,r=route,lg=lang)=>{setScreen(sc);save(d,r,sc,lg);};
+  const changeLang=(l)=>{setLang(l);save(data,route,screen,l);};
+  const submit=d=>{setData(d);setRoute(null);go('result',d,null,lang);};
+  const choose=r=>{setRoute(r);go('progress',data,r,lang);};
+  const reset=()=>{setData(null);setRoute(null);setScreen('landing');localStorage.removeItem(KEY);};
+
+  const props={lang,setLang:changeLang};
+  return(
+    <div className="min-h-screen bg-slate-950 text-white" style={{fontFamily:"'Inter','Sarabun',sans-serif"}}>
+      <div className="max-w-md mx-auto min-h-screen">
+        {screen==='landing'  &&<LandingScreen  onStart={()=>go('input')} {...props}/>}
+        {screen==='input'    &&<InputScreen    onSubmit={submit} onBack={()=>go('landing')} {...props}/>}
+        {screen==='result'   &&data&&<ResultScreen   data={data} onContinue={()=>go('routes')} onReset={reset} {...props}/>}
+        {screen==='routes'   &&data&&<RoutesScreen   data={data} onChoose={choose} onBack={()=>go('result')} {...props}/>}
+        {screen==='progress' &&data&&route&&<ProgressScreen data={data} route={route} onBack={()=>go('routes')} onReset={reset} {...props}/>}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
 </body>
 </html>

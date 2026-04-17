@@ -8,5 +8,4 @@ serve.py
 
 # Node (if added later)
 node_modules/
-dist/
 .env

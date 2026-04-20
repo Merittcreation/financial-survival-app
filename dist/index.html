@@ -259,6 +259,197 @@ function fmtC(n,lang){
     ? new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:0}).format(n)
     : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
 }
+function fmt(n){return new Intl.NumberFormat('en-US').format(Math.round(n||0));}
+
+/* ─── Detail Financial Snapshot ─────────────────────────────────── */
+function initDD(){
+  const mk=(id,en,th)=>({id,en,th,val:'',removable:false});
+  return{
+    res:[mk('house','House','บ้าน'),mk('condo_r','Condo','คอนโด'),mk('land','Land','ที่ดิน'),mk('car_r','Car','รถ'),mk('life','Life Insurance Capital','ทุนประกันชีวิต'),mk('oth_r','Other','อื่นๆ')],
+    inv:[mk('pvd','Provident Fund','กองทุนสำรองเลี้ยงชีพ'),mk('esg','ESG','ESG'),mk('ssf','SSF','SSF'),mk('rmf','RMF','RMF'),mk('etf','ETF','ETF'),mk('mf','Mutual Fund','กองทุนรวม'),mk('stk','Stocks','หุ้น'),mk('fx','FOREX','FOREX'),mk('gold','Gold','ทองคำ'),mk('crypto','CRYPTO','CRYPTO')],
+    liq:[mk('sav','Cash & Savings','เงินสดออมทรัพย์'),mk('fd','Fixed Deposit','ฝากประจำ'),mk('bond','Savings Bond','สลากออมสิน')],
+    liabS:[mk('cc1','Credit Card 1','บัตรเครดิต 1'),mk('cc2','Credit Card 2','บัตรเครดิต 2')],
+    liabL:[mk('mtg','House Loan','สินเชื่อบ้าน'),mk('carl','Car Loan','สินเชื่อรถ'),mk('condol','Condo Loan','สินเชื่อคอนโด')],
+    inc:[{id:'inc0',label:'',val:''}],
+    annualInc:'',
+    exp:[mk('food','Food','อาหาร'),mk('trans','Transport','เดินทาง'),mk('hous','Housing / Rent','ที่พัก'),mk('util','Utilities','Utilities'),mk('debt_p','Debt Payments','ผ่อนชำระ'),mk('shop','Shopping','Shopping'),mk('hlth','Health','สุขภาพ'),mk('oth_e','Other','อื่นๆ'),mk('tax','Tax','ภาษี'),mk('inv_e','Investment','ลงทุน')],
+  };
+}
+function calcDD(dd){
+  const sum=a=>a.reduce((s,x)=>s+(parseFloat(x.val)||0),0);
+  const totalRes=sum(dd.res),totalInv=sum(dd.inv),totalLiq=sum(dd.liq);
+  const totalAssets=totalRes+totalInv+totalLiq;
+  const totalLiabS=sum(dd.liabS),totalLiabL=sum(dd.liabL),totalLiab=totalLiabS+totalLiabL;
+  const netWorth=totalAssets-totalLiab;
+  const totalMonthlyInc=sum(dd.inc);
+  const annualInc=parseFloat(dd.annualInc)||0;
+  const avgMonthlyInc=annualInc>0?annualInc/12:totalMonthlyInc;
+  const totalExp=sum(dd.exp);
+  const netCF=avgMonthlyInc-totalExp;
+  const debtPay=parseFloat(dd.exp.find(e=>e.id==='debt_p')?.val)||0;
+  const liqRatio=totalExp>0?totalLiq/totalExp:0;
+  const savRate=avgMonthlyInc>0?(Math.max(0,netCF)/avgMonthlyInc)*100:0;
+  const debtPayRate=avgMonthlyInc>0?(debtPay/avgMonthlyInc)*100:0;
+  return{totalRes,totalInv,totalLiq,totalAssets,totalLiabS,totalLiabL,totalLiab,netWorth,avgMonthlyInc,totalExp,netCF,liqRatio,savRate,debtPayRate};
+}
+
+function SecHead({icon,title,total,cur,color}){
+  const cls={blue:'text-blue-300 border-blue-500/30 bg-blue-500/10',green:'text-emerald-300 border-emerald-500/30 bg-emerald-500/10',red:'text-red-300 border-red-500/30 bg-red-500/10',amber:'text-amber-300 border-amber-500/30 bg-amber-500/10'};
+  const c=cls[color]||cls.blue;
+  return(<div className={`flex items-center justify-between rounded-xl px-4 py-3 border mt-6 mb-1 ${c}`}><span className="font-black text-sm">{icon} {title}</span><span className="font-bold text-sm">{cur}{fmt(total)}</span></div>);
+}
+function SubHead({title}){return <p className="text-slate-500 text-xs uppercase tracking-widest mt-4 mb-1 px-1">{title}</p>;}
+function FRow({label,val,onChange,cur,onRemove,editable,onLabelChange,lang}){
+  const[foc,setFoc]=useState(false);
+  const disp=val?(foc?val:fmt(+val)):'';
+  return(
+    <div className="flex items-center gap-2 py-2 border-b border-slate-800/40 min-h-[44px]">
+      {editable
+        ?<input value={label} onChange={e=>onLabelChange(e.target.value)} placeholder={lang==='th'?'ชื่อรายรับ':'Income name'} className="flex-1 bg-transparent text-sm text-slate-300 outline-none border-b border-slate-700 pb-0.5 min-w-0"/>
+        :<span className="flex-1 text-slate-300 text-sm leading-snug min-w-0">{label}</span>
+      }
+      {onRemove&&<button onClick={onRemove} className="text-slate-600 hover:text-red-400 text-lg px-1 shrink-0 leading-none">×</button>}
+      <div className={`flex items-center rounded-lg border shrink-0 transition-colors ${foc?'border-emerald-500 bg-slate-800':'border-slate-700/50 bg-slate-900/80'}`}>
+        <span className="pl-2 text-slate-500 text-sm select-none">{cur}</span>
+        <input type="text" inputMode="numeric" value={disp} onChange={e=>onChange(e.target.value.replace(/[^0-9]/g,''))} onFocus={()=>setFoc(true)} onBlur={()=>setFoc(false)} placeholder="0" className="bg-transparent py-2 pr-3 pl-1 text-white text-sm text-right outline-none w-28"/>
+      </div>
+    </div>
+  );
+}
+function TRow({label,val,cur}){
+  return(<div className="flex items-center justify-between px-1 py-1.5"><span className="text-slate-500 text-xs">{label}</span><span className="text-slate-400 text-xs">{cur}{fmt(val)}</span></div>);
+}
+function BigTotal({label,val,cur,color,note}){
+  const cls={blue:'bg-blue-500/10 border-blue-500/30 text-blue-300',green:'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',red:'bg-red-500/10 border-red-500/30 text-red-300',amber:'bg-amber-500/10 border-amber-500/30 text-amber-300'};
+  const c=cls[color]||cls.blue;
+  return(<div className={`flex items-center justify-between rounded-xl px-4 py-3 mt-2 border ${c}`}><div><p className="font-bold text-sm">{label}</p>{note&&<p className="text-xs opacity-60 mt-0.5">{note}</p>}</div><span className="font-black text-xl">{cur}{fmt(val)}</span></div>);
+}
+function AddBtn({onClick,label}){
+  return(<button onClick={onClick} className="text-emerald-500 hover:text-emerald-400 text-xs font-semibold mt-2 mb-1 flex items-center gap-1 active:scale-95 transition-all">{label}</button>);
+}
+function RatCard({title,formula,value,target,status}){
+  return(
+    <div className={`rounded-xl p-4 border mb-3 ${status.bg}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1"><p className="text-slate-200 text-sm font-semibold mb-0.5">{title}</p><p className="text-slate-500 text-xs leading-snug">{formula}</p></div>
+        <div className="text-right shrink-0"><div className={`text-2xl font-black ${status.c}`}>{value}</div><span className={`text-xs font-bold ${status.c}`}>{status.label}</span></div>
+      </div>
+      <p className="text-slate-600 text-xs mt-2">{target}</p>
+    </div>
+  );
+}
+
+function DetailScreen({onBack,onApply,lang,setLang,initData}){
+  const[dd,setDD]=useState(initData||initDD());
+  const L=(en,th)=>lang==='th'?th:en;
+  const cur=lang==='th'?'฿':'$';
+  const t=T[lang];
+  const upd=(sec,idx,v)=>setDD(p=>{const a=[...p[sec]];a[idx]={...a[idx],val:v};return{...p,[sec]:a};});
+  const updL=(sec,idx,label)=>setDD(p=>{const a=[...p[sec]];a[idx]={...a[idx],label};return{...p,[sec]:a};});
+  const addRow=(sec,en,th)=>setDD(p=>({...p,[sec]:[...p[sec],{id:'x'+Date.now(),en,th,val:'',removable:true}]}));
+  const rmRow=(sec,idx)=>setDD(p=>({...p,[sec]:p[sec].filter((_,i)=>i!==idx)}));
+  const c=calcDD(dd);
+  const rst=(lo,hi,v,goodLabel='Good',goodTh='ดี')=>v>=lo&&v<=hi?{c:'text-emerald-400',bg:'bg-emerald-500/10 border-emerald-500/30',label:L(goodLabel,goodTh)}:v<lo?{c:'text-amber-400',bg:'bg-amber-500/10 border-amber-500/30',label:L('Low','ต่ำ')}:{c:'text-red-400',bg:'bg-red-500/10 border-red-500/30',label:L('High','สูง')};
+  const blank={c:'text-slate-400',bg:'bg-slate-800/50 border-slate-700',label:'—'};
+  const liqSt=c.totalExp>0?rst(3,6,c.liqRatio):blank;
+  const savSt=c.avgMonthlyInc>0?(c.savRate>=10?{c:'text-emerald-400',bg:'bg-emerald-500/10 border-emerald-500/30',label:L('Good','ดี')}:{c:'text-red-400',bg:'bg-red-500/10 border-red-500/30',label:L('Low','ต่ำ')}):blank;
+  const dSt=c.avgMonthlyInc>0?(c.debtPayRate<=30?{c:'text-emerald-400',bg:'bg-emerald-500/10 border-emerald-500/30',label:L('Good','ดี')}:{c:'text-red-400',bg:'bg-red-500/10 border-red-500/30',label:L('High','สูง')}):blank;
+
+  return(
+    <div className="min-h-screen flex flex-col px-4 py-0 pb-24">
+      <div className="flex items-center justify-between mb-4 sticky top-0 bg-slate-950 z-10 py-4 -mx-4 px-4 border-b border-slate-800/60">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 text-sm transition-colors">{t.back}</button>
+        <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">{L('Financial Snapshot','ภาพรวมการเงิน')}</span>
+        <LangToggle lang={lang} setLang={setLang}/>
+      </div>
+
+      {/* ── ASSETS ── */}
+      <SecHead icon="🏦" title={L('Assets','สินทรัพย์')} total={c.totalAssets} cur={cur} color="blue"/>
+      <SubHead title={L('Residential / Collectibles','สินทรัพย์เพื่ออยู่อาศัย / สะสม')}/>
+      {dd.res.map((f,i)=><FRow key={f.id} label={lang==='th'?f.th:f.en} val={f.val} onChange={v=>upd('res',i,v)} cur={cur} onRemove={f.removable?()=>rmRow('res',i):null}/>)}
+      <AddBtn onClick={()=>addRow('res','Other Asset','สินทรัพย์อื่นๆ')} label={L('+ Add item','+ เพิ่มรายการ')}/>
+      <TRow label={L('Subtotal','รวมย่อย')} val={c.totalRes} cur={cur}/>
+
+      <SubHead title={L('Investment Assets','สินทรัพย์ลงทุน')}/>
+      {dd.inv.map((f,i)=><FRow key={f.id} label={lang==='th'?f.th:f.en} val={f.val} onChange={v=>upd('inv',i,v)} cur={cur} onRemove={f.removable?()=>rmRow('inv',i):null}/>)}
+      <AddBtn onClick={()=>addRow('inv','Other Investment','การลงทุนอื่นๆ')} label={L('+ Add item','+ เพิ่มรายการ')}/>
+      <TRow label={L('Subtotal','รวมย่อย')} val={c.totalInv} cur={cur}/>
+
+      <SubHead title={L('Liquid Assets (short-term)','สินทรัพย์ระยะสั้น (สภาพคล่อง)')}/>
+      {dd.liq.map((f,i)=><FRow key={f.id} label={lang==='th'?f.th:f.en} val={f.val} onChange={v=>upd('liq',i,v)} cur={cur} onRemove={f.removable?()=>rmRow('liq',i):null}/>)}
+      <AddBtn onClick={()=>addRow('liq','Other Liquid','สภาพคล่องอื่นๆ')} label={L('+ Add item','+ เพิ่มรายการ')}/>
+      <TRow label={L('Subtotal','รวมย่อย')} val={c.totalLiq} cur={cur}/>
+      <BigTotal label={L('Total Assets','รวมสินทรัพย์')} val={c.totalAssets} cur={cur} color="blue"/>
+
+      {/* ── LIABILITIES ── */}
+      <SecHead icon="💳" title={L('Liabilities','หนี้สิน')} total={c.totalLiab} cur={cur} color="red"/>
+      <SubHead title={L('Short-term Debt','หนี้สินระยะสั้น')}/>
+      {dd.liabS.map((f,i)=><FRow key={f.id} label={lang==='th'?f.th:f.en} val={f.val} onChange={v=>upd('liabS',i,v)} cur={cur} onRemove={f.removable?()=>rmRow('liabS',i):null}/>)}
+      <AddBtn onClick={()=>addRow('liabS','Other Short-term Debt','หนี้ระยะสั้นอื่นๆ')} label={L('+ Add item','+ เพิ่มรายการ')}/>
+      <TRow label={L('Subtotal','รวมย่อย')} val={c.totalLiabS} cur={cur}/>
+
+      <SubHead title={L('Long-term Debt','หนี้สินระยะยาว')}/>
+      {dd.liabL.map((f,i)=><FRow key={f.id} label={lang==='th'?f.th:f.en} val={f.val} onChange={v=>upd('liabL',i,v)} cur={cur} onRemove={f.removable?()=>rmRow('liabL',i):null}/>)}
+      <AddBtn onClick={()=>addRow('liabL','Other Long-term Debt','หนี้ระยะยาวอื่นๆ')} label={L('+ Add item','+ เพิ่มรายการ')}/>
+      <TRow label={L('Subtotal','รวมย่อย')} val={c.totalLiabL} cur={cur}/>
+      <BigTotal label={L('Total Liabilities','รวมหนี้สิน')} val={c.totalLiab} cur={cur} color="red"/>
+
+      {/* ── INCOME ── */}
+      <SecHead icon="💵" title={L('Income','รายรับ')} total={c.avgMonthlyInc} cur={cur} color="green"/>
+      <SubHead title={L('Monthly Income Items','รายรับรายเดือน')}/>
+      {dd.inc.map((f,i)=>(
+        <FRow key={f.id} label={f.label||(lang==='th'?`รายรับ ${i+1}`:`Income ${i+1}`)} val={f.val}
+          onChange={v=>upd('inc',i,v)} cur={cur}
+          onRemove={dd.inc.length>1?()=>rmRow('inc',i):null}
+          editable onLabelChange={v=>updL('inc',i,v)} lang={lang}/>
+      ))}
+      <AddBtn onClick={()=>setDD(p=>({...p,inc:[...p.inc,{id:'i'+Date.now(),label:'',val:''}]}))} label={L('+ Add income','+ เพิ่มรายรับ')}/>
+      <div className="flex items-center gap-2 py-2 border-b border-slate-800/40 mt-1">
+        <span className="flex-1 text-slate-300 text-sm">{L('Annual Income (optional)','รายรับรายปี (ถ้ามี)')}</span>
+        <div className="flex items-center rounded-lg border border-slate-700/50 bg-slate-900/80 shrink-0">
+          <span className="pl-2 text-slate-500 text-sm select-none">{cur}</span>
+          <input type="text" inputMode="numeric" value={dd.annualInc} onChange={e=>setDD(p=>({...p,annualInc:e.target.value.replace(/[^0-9]/g,'')}))} placeholder="0" className="bg-transparent py-2 pr-3 pl-1 text-white text-sm text-right outline-none w-28"/>
+        </div>
+      </div>
+      <BigTotal label={L('Avg Monthly Income','เฉลี่ยรายรับต่อเดือน')} val={c.avgMonthlyInc} cur={cur} color="green" note={dd.annualInc?L('(annual ÷ 12)','(รายปี ÷ 12)'):undefined}/>
+
+      {/* ── EXPENSES ── */}
+      <SecHead icon="📊" title={L('Monthly Expenses','ค่าใช้จ่ายรายเดือน')} total={c.totalExp} cur={cur} color="amber"/>
+      {dd.exp.map((f,i)=><FRow key={f.id} label={lang==='th'?f.th:f.en} val={f.val} onChange={v=>upd('exp',i,v)} cur={cur} onRemove={f.removable?()=>rmRow('exp',i):null}/>)}
+      <AddBtn onClick={()=>addRow('exp','Other Expense','ค่าใช้จ่ายอื่นๆ')} label={L('+ Add item','+ เพิ่มรายการ')}/>
+      <BigTotal label={L('Total Monthly Expenses','รวมค่าใช้จ่ายต่อเดือน')} val={c.totalExp} cur={cur} color="amber"/>
+
+      {/* ── SUMMARY ── */}
+      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-8 mb-4">{L('Summary','สรุปผล')}</p>
+      <div className={`rounded-2xl p-4 mb-3 border ${c.netCF>=0?'bg-emerald-500/10 border-emerald-500/30':'bg-red-500/10 border-red-500/30'}`}>
+        <div className="flex justify-between items-center">
+          <div><p className="text-slate-200 text-sm font-semibold">{L('Net Cash Flow','กระแสเงินสดสุทธิ')}</p><p className="text-slate-500 text-xs mt-0.5">{L('Income − Expenses / month','รายรับ − รายจ่าย / เดือน')}</p></div>
+          <span className={`font-black text-2xl ${c.netCF>=0?'text-emerald-400':'text-red-400'}`}>{c.netCF>=0?'+':''}{fmtC(Math.round(c.netCF),lang)}</span>
+        </div>
+      </div>
+      <div className={`rounded-2xl p-4 mb-3 border ${c.netWorth>=0?'bg-blue-500/10 border-blue-500/30':'bg-red-500/10 border-red-500/30'}`}>
+        <div className="flex justify-between items-center">
+          <div><p className="text-slate-200 text-sm font-semibold">{L('Net Worth','รวมความมั่งคั่งสุทธิ')}</p><p className="text-slate-500 text-xs mt-0.5">{L('Assets − Liabilities','สินทรัพย์รวม − หนี้สินรวม')}</p></div>
+          <span className={`font-black text-2xl ${c.netWorth>=0?'text-blue-400':'text-red-400'}`}>{fmtC(Math.round(c.netWorth),lang)}</span>
+        </div>
+      </div>
+
+      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 mt-5">{L('Financial Ratios','อัตราส่วนทางการเงิน')}</p>
+      <RatCard title={L('Basic Liquidity Ratio','อัตราส่วนสภาพคล่องพื้นฐาน')} formula={L('Liquid Assets ÷ Monthly Expenses','สินทรัพย์สภาพคล่อง ÷ รายจ่ายต่อเดือน')} value={c.totalExp>0?c.liqRatio.toFixed(1)+'x':'—'} target={L('Should be 3–6x','ควรอยู่ระหว่าง 3–6 เท่า')} status={liqSt}/>
+      <RatCard title={L('Savings Rate','อัตราส่วนการออม')} formula={L('Monthly Savings ÷ Avg Monthly Income','เงินออมต่อเดือน ÷ รายได้เฉลี่ยต่อเดือน')} value={c.avgMonthlyInc>0?c.savRate.toFixed(1)+'%':'—'} target={L('Should be >10–30%','ควรมากกว่า 10–30%')} status={savSt}/>
+      <RatCard title={L('Debt Service Ratio','อัตราส่วนการชำระหนี้')} formula={L('Monthly Debt Payment ÷ Avg Monthly Income','ชำระหนี้ต่อเดือน ÷ รายได้เฉลี่ยต่อเดือน')} value={c.avgMonthlyInc>0?c.debtPayRate.toFixed(1)+'%':'—'} target={L('Should be <30%','ควรน้อยกว่า 30%')} status={dSt}/>
+
+      <div className="mt-6 pb-6">
+        <button onClick={()=>onApply({cash:Math.round(c.totalLiq),income:Math.round(c.avgMonthlyInc),expenses:Math.round(c.totalExp),debt:Math.round(c.totalLiab)},dd)}
+          className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[.98] text-white font-bold text-lg rounded-xl transition-all shadow-xl shadow-emerald-500/20 mb-2">
+          {L('Apply to Calculator →','นำไปคำนวณ →')}
+        </button>
+        <p className="text-center text-slate-600 text-xs">{L('Auto-fills the 4 main fields from your data above','นำค่าที่คำนวณได้ไปกรอกในช่องหลักโดยอัตโนมัติ')}</p>
+      </div>
+    </div>
+  );
+}
+/* ─────────────────────────────────────────────────────────────────── */
 
 function LangToggle({lang,setLang}){
   return(
@@ -338,9 +529,9 @@ function LandingScreen({onStart,lang,setLang}){
 const FIELD_IDS=['cash','income','expenses','debt'];
 const FIELD_REQ={cash:true,income:true,expenses:true,debt:false};
 
-function InputScreen({onSubmit,onBack,lang,setLang}){
+function InputScreen({onSubmit,onBack,onDetail,lang,setLang,initVals}){
   const t=T[lang];
-  const[vals,setVals]=useState({cash:'',income:'',expenses:'',debt:''});
+  const[vals,setVals]=useState(initVals?{cash:String(initVals.cash||''),income:String(initVals.income||''),expenses:String(initVals.expenses||''),debt:String(initVals.debt||'')}:{cash:'',income:'',expenses:'',debt:''});
   const[errs,setErrs]=useState({});
   const[focus,setFocus]=useState(null);
   const firstRef=useRef(null);
@@ -368,6 +559,12 @@ function InputScreen({onSubmit,onBack,lang,setLang}){
         <h1 className="text-2xl font-extrabold text-white leading-tight mb-1">{t.inputTitle}</h1>
         <p className="text-slate-400 text-base">{t.inputSub}</p>
       </div>
+      <button type="button" onClick={onDetail}
+        className="anim-fiu d1 w-full py-3.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 hover:border-emerald-500/50 text-slate-300 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 mb-6 active:scale-[.98]">
+        <span>📋</span>
+        <span>{lang==='th'?'กรอกข้อมูลการเงินละเอียด':'Detail Financial Calculator'}</span>
+        <span className="text-slate-500 text-xs ml-1">{lang==='th'?'→':'→'}</span>
+      </button>
       <form onSubmit={submit} className="flex flex-col gap-5">
         {FIELD_IDS.map((id,i)=>(
           <div key={id} className={`anim-fiu d${i+1}`}>
@@ -637,12 +834,36 @@ function ProgressScreen({data,route,onBack,onReset,lang,setLang}){
   );
 }
 
+class ErrorBoundary extends React.Component {
+  state = { err: null };
+  static getDerivedStateFromError(e) { return { err: e }; }
+  render() {
+    if (this.state.err) {
+      return (
+        <div style={{minHeight:'100vh',background:'#020209',color:'white',padding:'24px',fontFamily:'monospace'}}>
+          <h2 style={{color:'#f87171',fontSize:'18px',marginBottom:'12px'}}>⚠ App Error — please share this with the developer</h2>
+          <pre style={{color:'#fca5a5',fontSize:'12px',whiteSpace:'pre-wrap',wordBreak:'break-word',background:'#1e0a0a',padding:'12px',borderRadius:'8px'}}>
+            {this.state.err.message}{'\n\n'}{this.state.err.stack}
+          </pre>
+          <button onClick={()=>{localStorage.clear();window.location.reload();}}
+            style={{marginTop:'20px',padding:'12px 24px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',cursor:'pointer',fontSize:'14px'}}>
+            Clear cache &amp; reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const KEY='fsa_v3';
 function App(){
   const[screen,setScreen]=useState('landing');
   const[data,setData]=useState(null);
   const[route,setRoute]=useState(null);
   const[lang,setLang]=useState('en');
+  const[detailData,setDetailData]=useState(null);
+  const[inputVals,setInputVals]=useState(null);
 
   useEffect(()=>{
     try{
@@ -663,14 +884,17 @@ function App(){
   const changeLang=(l)=>{setLang(l);save(data,route,screen,l);};
   const submit=d=>{setData(d);setRoute(null);go('result',d,null,lang);};
   const choose=r=>{setRoute(r);go('progress',data,r,lang);};
-  const reset=()=>{setData(null);setRoute(null);setScreen('landing');localStorage.removeItem(KEY);};
+  const reset=()=>{setData(null);setRoute(null);setInputVals(null);setScreen('landing');localStorage.removeItem(KEY);};
+  const openDetail=()=>setScreen('detail');
+  const applyDetail=(mapped,dd)=>{setDetailData(dd);setInputVals(mapped);setScreen('input');};
 
   const props={lang,setLang:changeLang};
   return(
     <div className="min-h-screen bg-slate-950 text-white" style={{fontFamily:"'Inter','Sarabun',sans-serif"}}>
       <div className="max-w-md mx-auto min-h-screen">
         {screen==='landing'  &&<LandingScreen  onStart={()=>go('input')} {...props}/>}
-        {screen==='input'    &&<InputScreen    onSubmit={submit} onBack={()=>go('landing')} {...props}/>}
+        {screen==='input'    &&<InputScreen    onSubmit={submit} onBack={()=>go('landing')} onDetail={openDetail} initVals={inputVals} {...props}/>}
+        {screen==='detail'   &&<DetailScreen   onBack={()=>setScreen('input')} onApply={applyDetail} initData={detailData} {...props}/>}
         {screen==='result'   &&data&&<ResultScreen   data={data} onContinue={()=>go('routes')} onReset={reset} {...props}/>}
         {screen==='routes'   &&data&&<RoutesScreen   data={data} onChoose={choose} onBack={()=>go('result')} {...props}/>}
         {screen==='progress' &&data&&route&&<ProgressScreen data={data} route={route} onBack={()=>go('routes')} onReset={reset} {...props}/>}
@@ -678,7 +902,9 @@ function App(){
     </div>
   );
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary><App/></ErrorBoundary>
+);
 </script>
 </body>
 </html>
